@@ -1,0 +1,26 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+*.egg-info/
+*.egg
+
+# --- Streamlit ---
+.streamlit/
+
+# --- Logs, cache, artifacts ---
+*.log
+.cache/
+.ipynb_checkpoints/
+
+# --- macOS ---
+.DS_Store
+
+# --- Other ---
+.env
