@@ -398,3 +398,5 @@ with tab6:
         \qquad \theta_{t+1} = \theta_t - \alpha g_t \\
         \end{array}
         """)
+
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/001_streamlit_reminders.py)")

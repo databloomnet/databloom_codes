@@ -68,7 +68,6 @@ if num_clicks:
     st.text(msg)
 
 
-#st.write(f"st.session_state.event_clock_time: {st.session_state.event_clock_time}" )
 
-#st.write(f"st.session_state.event_epoch_time: {st.session_state.event_epoch_time}" )
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/004_timer.py)")
 

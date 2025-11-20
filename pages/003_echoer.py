@@ -103,29 +103,21 @@ def encoded_emoji(s):
 st.title("Echoer")
 msg = st.text_input("Say something", value="the quick brown fox jumped over the lazy dog")
 if st.button("Send") and msg:
-    st.success(f"(yelling):    {msg.upper()}")
-    st.success(f"(whisper):    {msg.lower()}")
-    st.success(f"(alt):        {mixcase_alternate(msg)}")
-    st.success(f"(camel):      {camelcase(msg)}")
-    st.success(f"(upsidedown): {flip_upside_down(msg)}")
-    st.success(f"(flipvowels): {flip_vowels(msg)}")
-    st.success(f"(upvowels):   {upcase_vowels(msg.lower())}")
-    st.success(f"(coded):      {encoded_emoji(msg)}")
+    out = []
+    out.append( f"(yelling):    {msg.upper()}" )
+    out.append( f"(whisper):    {msg.lower()}")
+    out.append( f"(alt):        {mixcase_alternate(msg)}")
+    out.append(f"(camel):      {camelcase(msg)}")
+    out.append(f"(upsidedown): {flip_upside_down(msg)}")
+    out.append(f"(flipvowels): {flip_vowels(msg)}")
+    out.append(f"(upvowels):   {upcase_vowels(msg.lower())}")
+    out.append(f"(coded):      {encoded_emoji(msg)}")
 
-    # st.success(f"Echo: {msg_upcase}")
-    # msg2 = mixcase_alternate(msg)
-    # msg3 = camelcase(msg)
-    # st.success(f"Echo: {msg2}")
-    # st.success(f"Echo: {msg3}")
-    # msg_yell = msg.upper()
-    # msg_quiet = msg.lower()
-    # msg_alt = mixcase_alternate(msg)
-    # msg_camel = camelcase(msg)
+    outc = ""
+    for s in out:
+        outc += f"{s}\n\n"
+    st.success(outc)
 
-    # msg_all = ""
-    # msg_all += "(yelling):  " + msg_yell + "\n"
-    # msg_all += "(whisper):  " + msg_quiet + "\n"
-    # msg_all += "(alterate): " + msg_alt + "\n"
-    # msg_all += "(camel):   " + msg_camel + "\n"
-    # st.success(msg_all)
 
+
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/003_echoer.py)")

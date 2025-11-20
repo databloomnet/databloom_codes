@@ -25,3 +25,4 @@ pip-wheel-metadata/
 # --- Other ---
 .env
 test*.py
+pages/archived-pages/
