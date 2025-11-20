@@ -62,7 +62,7 @@ Some example apps are on the left.  Or you can click on stuff below...
 - [logger](logger) - simple logging app
 - [echoer](echoer) - toy streamlit app to test reading and writing
 - [timer](timer) - stopwatch
-- [ai1](ai1) - in dev
+- [ai1](ai1) - hello, chat gpt
 - chatter – simple chatting with LLMs
 - RAG Lite – doc Q&A prototype
 """

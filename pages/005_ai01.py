@@ -1,4 +1,4 @@
-# lesson01.py
+# 005_ai01.py
 
 import streamlit as st
 import datetime
@@ -13,7 +13,7 @@ from openai import OpenAI
 def toy_is_prompt_scary(msg: str):
     """
     simple example
-    returns False if it's ok
+    returns True if it finds a banned word
     """
     BANNED_WORDS = ["kill","murder"]
     m = msg.strip()
@@ -41,6 +41,8 @@ model="gpt-4.1-nano"
 msg = f"ChatGPT, by OpenAI, is probably the most famous company with foundation models.  They have many models, let's try {model}."
 msg += " We use two statements for this.  First we setup a connection with OpenAI and then we send a request and assign it to response."
 msg += " I'll add some timers to the code so we can see how long stuff can take.  I'll explain the 2nd to last line shortly."
+msg += " (fyi: As this is running in streamlit this isn't the full code.  You can see all the code on the github page (at bottom).)"
+
 st.markdown(msg)
 
 msg_code = """
@@ -72,7 +74,7 @@ with st.form("single_form"):
 if submitted:
     # check rate limiter
     if not st.session_state.rate_limiter.allow():
-        print("rate limited")
+        #print("rate limited")
         st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
         st.stop()
 
@@ -88,10 +90,15 @@ if submitted:
         t0 = time.time()
         openai = OpenAI()
         t1 = time.time()
-        response = openai.chat.completions.create(
-            model="gpt-4.1-nano",
-            messages=[{"role": "user", "content": user_text}],
-        )
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4.1-nano",
+                messages=[{"role": "user", "content": user_text}],
+            )
+        except Exception as e:
+            st.error(f"Model call failed: {e}")
+            st.stop()
+
     t2 = time.time()
     m = f"We received a response from OpenAI.  It took {t1 - t0:4.3f} s to establish a connection and {t2 - t1:4.3f} s to get the response."
     m += "  Like most APIs, it returned an object, which includes a lot of stuff we may not want to look at right now."
