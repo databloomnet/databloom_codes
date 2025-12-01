@@ -335,7 +335,7 @@ verify_session()
 if "log" not in st.session_state:
     st.session_state.log = []
 
-st.markdown("[Streamlit.com](https://streamlit.io/) is great for quickly building interactive python apps!  I put this page together to learn/remember stuff. - Jeremy")
+st.markdown("[Streamlit.com](https://streamlit.io/) is great for quickly building interactive python apps!  I put this page together to learn/remember stuff.  No AI stuff here...- Jeremy")
 #st.text("https://docs.streamlit.io/develop/api-reference")
 #st.write("https://streamlit.io/")
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Displaying", "Input Buttons", "Input Selectors", "Input Pills", "Misc Inputs", "Advanced"])

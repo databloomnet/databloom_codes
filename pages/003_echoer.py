@@ -101,6 +101,8 @@ def encoded_emoji(s):
 
 
 st.title("Echoer")
+st.markdown("A simple echoer.  No AI stuff here...- Jeremy")
+
 msg = st.text_input("Say something", value="the quick brown fox jumped over the lazy dog")
 if st.button("Send") and msg:
     out = []

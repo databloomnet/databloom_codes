@@ -34,7 +34,7 @@ if not openai_api_key:
 
 
 
-st.title("Lesson 1: Hello, ChatGPT")
+st.title("Hello, ChatGPT")
 
 model="gpt-4.1-nano"
 #msg = "Claude, by anthropic, is one of the most famous foundation models.  Go ahead and ask Claude a question."
@@ -94,14 +94,16 @@ if submitted:
             response = openai.chat.completions.create(
                 model="gpt-4.1-nano",
                 messages=[{"role": "user", "content": user_text}],
+                #max_output_tokens = 50
+                max_tokens = 50
             )
         except Exception as e:
             st.error(f"Model call failed: {e}")
             st.stop()
 
     t2 = time.time()
-    m = f"We received a response from OpenAI.  It took {t1 - t0:4.3f} s to establish a connection and {t2 - t1:4.3f} s to get the response."
-    m += "  Like most APIs, it returned an object, which includes a lot of stuff we may not want to look at right now."
+    m = f"We received a response from OpenAI.  It took {t1 - t0:4.2f} s to establish a connection and {t2 - t1:4.2f} s to get the response."
+    m += "  \nLike most APIs, it returned an object, which includes a lot of stuff we may not want to look at right now."
     m += "  In line 9 we pull out one part of the full response object and print it on line 10"
     st.success(m)
     answer = response.choices[0].message.content
@@ -110,7 +112,20 @@ if submitted:
         st.markdown("### ChatGPT replied with:")
         st.text_area(" ", answer)#, height=1)
 
-    st.markdown(f"Next up: try asking about a different topic.  Or a different question.  Hopefully something short and easy as I'm paying OpenAi for this, and {model} is cool but not a powerhouse of a model.  Maybe ask about chess?  Or heavy water?")
+    st.markdown(f"You can see the entire object returned below, and/or the full streamlit code on github.  Note the github has some other stuff, like toy_is_prompt_scary() to verify the prompt is sfw and rate limiting so I don't go broke if hackers discover this" )
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/---)")
+    with st.container():
+        st.markdown("### Here is the entire object it sent (response.model_dump())")
+        
+        #print(response)
+        #st.text_area(" ", "glah")#, height=1)
+        st.json(response.model_dump()) # already a pydantic model
+
+
+
+    #st.markdown(f"Next up: try asking about a different topic.  Or a different question.  Hopefully something short and easy as I'm paying OpenAi for this, and {model} is cool but not a powerhouse of a model.  Maybe ask about chess?  Or heavy water?")
+
+
+
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/005_ai01.py)")

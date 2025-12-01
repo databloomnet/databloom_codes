@@ -16,6 +16,8 @@ verify_session()
 if "log" not in st.session_state:
     st.session_state.log = []
 
+st.markdown("Some simple logging tools.  No AI stuff here...- Jeremy")
+
 tab1, tab2, tab3 = st.tabs(["View Log", "Write to Log", "Clear Log"])
 
 with tab1:
