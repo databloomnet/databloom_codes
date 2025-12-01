@@ -322,7 +322,7 @@ if st.session_state.limerick is not None:
 
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/...")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/006_wikipedia.py)")
 
 
 
