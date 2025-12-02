@@ -6,7 +6,7 @@ simple response parsing
 import datetime
 import streamlit as st
 from openai import OpenAI
-
+import time
 
 VALID_KEYS_TOP = ["id", "created",  "model", "object"]
 VALID_KEYS_CHOICES_0_MESSAGE = ["content", "refusal"]
@@ -14,13 +14,10 @@ VALID_KEYS_USAGE = ["completion_tokens", "prompt_tokens", "total_tokens"]
 VALID_KEYS_USAGE_COMPLETION_DETAILS = ["reasoning_tokens"]
 
 
-def get_response_info(completion, list_of_keys):
-    # for now assume chatgpt
-
-    #print(type(completion))
-    #print(completion)
-    #print("argh")
-
+def get_approved_completion_to_share(completion, list_of_keys):
+    """
+    preapproved list of keys we can get from chatgpt resposne
+    """
     warnings = []
     response = {}
     #print(response.model_dump())
@@ -39,10 +36,15 @@ def get_response_info(completion, list_of_keys):
 
     if len(warnings):
         print(warnings)
+        response["warnings"] = warnings
     
     return response
 
-def get_est_response_cost(response, t0 = 0):
+
+
+def get_est_response_costSUSPENDED(response, t0 = 0):
+    # for now assume chatgpt
+    # get specific tokens to est cost withOUT model - so flat est... not great
 
     pt = response.usage.prompt_tokens
     ct = response.usage.completion_tokens
@@ -69,10 +71,58 @@ def get_est_response_cost(response, t0 = 0):
     
     return out
 
-"""
-cost per SKU  - I want to save 1 million
-
-build a configurator for a system to generate a quote and config.  Checked the price list every time... pricelist changes once a quarter...
 
 
-"""
+
+def get_response_summary(completion, list_of_keys = ["created", "model", "id", "object", "content", "refusal", "completion_tokens", "prompt_tokens", "total_tokens", "reasoning_tokens"]):
+    # req_params =     completion_approved_to_share = get_response_info(completion, list_of_keys)
+    completion_approved_to_share = get_approved_completion_to_share(completion, list_of_keys)
+    for k in sorted(completion_approved_to_share.keys()):
+        print(k)
+
+    out_list = []
+
+    time_elapsed_since_prompted = -1
+    msg_est_cost = ""
+    if "created" in completion_approved_to_share:
+        time_elapsed_since_prompted = time.time() - completion.created
+        out_list.append("Completion initiated {:.1f}s ago".format(time_elapsed_since_prompted))
+        print("com")
+
+    
+
+    # est cost based on model
+    model_to_token_cost_d = { # (input toekns, output tokens)
+        "gpt-5-nano": (0.05, 0.40),
+        "gpt-5-mini": (0.25, 2.00),
+    }
+
+    model = completion.model 
+    prompt_tokens = completion.usage.prompt_tokens
+    completion_tokens = completion.usage.completion_tokens
+
+    prompt_tokens__est_cost_per_million = 0
+    completion_tokens__est_cost_per_million = 0
+    for prefix in model_to_token_cost_d:
+        if model.startswith(prefix):
+            prompt_tokens__est_cost_per_million, completion_tokens__est_cost_per_million = model_to_token_cost_d[prefix]
+
+    if prompt_tokens__est_cost_per_million and completion_tokens__est_cost_per_million:
+        cost = (prompt_tokens * prompt_tokens__est_cost_per_million) + (completion_tokens * completion_tokens__est_cost_per_million)
+        cost /= 1000000 
+        m = "est cost: {:0.5f}   (or {:.5f} per 1000 calls)".format(cost, cost * 1000)
+    else:
+        m = "could not identify model, can't estimate cost"
+    out_list.append(m)
+
+
+
+
+    for k in completion_approved_to_share:
+        out_list.append(" {:20s}   {:}".format(k, completion_approved_to_share[k]))
+
+    print(len(out_list))
+    return "\n".join(out_list)
+
+
+

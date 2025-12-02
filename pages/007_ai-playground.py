@@ -1,4 +1,4 @@
-# 007_playground.py
+# wikipedia-playground.py
 
 import streamlit as st
 import datetime
@@ -9,7 +9,7 @@ import wikipedia
 
 from rate_limiter import RateLimiter
 from openai import OpenAI
-from response_parser import get_response_info
+from response_parser import get_response_summary
 
 LLM_INPUT_CHAR_LIMIT = 2000
 
@@ -18,24 +18,12 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 
 
 
-def get_est_response_cost(completion, t0 = False):
-    #print(completion)
-    req_params = ["created", "model", "id", "object", "content", "refusal", "completion_tokens", "prompt_tokens", "total_tokens", "reasoning_tokens"]
-    result = get_response_info(completion, req_params)
-    for k in result:
-        print(" {:20s}   {:}".format(k, result[k]))
-        #print(k, result[k])
-    if "created" in result:
-        tt = time.time() - result["created"]
-        print("Completion initiated {:.1f}s ago".format(tt))
-
-
 
 
 
 # <rate limiter init>
 if  "rate_limiter" not in st.session_state:
-    st.session_state.rate_limiter = RateLimiter(max_requests=2,interval_sec=60)
+    st.session_state.rate_limiter = RateLimiter(max_requests=5,interval_sec=300)
 
 
 # store results for reruns
@@ -65,6 +53,7 @@ if "limerick_completion_report" not in st.session_state:
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
 # <main>
 st.set_page_config(page_title="databloom.net GPT Summarizer") # tab name
 st.title("Wikipedia → ChatGPT Summarizer") # title page
@@ -74,15 +63,7 @@ model="gpt-5-nano" # max_completion_tokens
 
 
 
-st.write("Using an llm with wikipedia.")
-with st.expander("streamlit note (toggle)", expanded=False):
-    m = "Fyi I'm learning streamlit and UX patterns as I do this.  This is an interesting bit of UX as first you enter the search term, then you select the word, then you execute one of the queries.  I converted this from the first pattern to the second:"
-    st.write(m)
-    
-    st.code("[[click to show X] and [click to show Y]]") 
-    st.code("[[[click to generate X] and [click to generate Y]] \n  # followed by\n[[show X if avail] and [show Y if avail]]]")
-
-
+st.write("Using an llm with wikipedia... with more info on returned chatgpt tokens")
 
 # 1. get query topic
 query = st.text_input("Search Wikipedia for:", placeholder="e.g. cookie, cloud, castle", max_chars = 30)
@@ -165,6 +146,10 @@ max_words = st.slider("Target length in words", min_value=1, max_value=100, valu
 
 # 6) show summary from chatgpt
 if st.button("Summarize with ChatGPT"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
+
     with st.spinner("Summarizing…"):
         t0 = time.time()
         prompt = (
@@ -188,10 +173,14 @@ if st.button("Summarize with ChatGPT"):
 
     st.session_state.summary = summary
     st.session_state.summary_completion = completion
-    st.session_state.summary_completion_report = get_est_response_cost(completion, t0)
+    st.session_state.summary_completion_report = get_response_summary(completion)
 
 # 7) haiku
 if st.button("Generate Haiku"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
+
     with st.spinner("generating haiku..."):
         prompt = (
             f"Generate a haiku about the following wikipedia entry: "
@@ -216,7 +205,7 @@ if st.button("Generate Haiku"):
 
     st.session_state.haiku = haiku
     st.session_state.haiku_completion = completion_haiku
-    st.session_state.haiku_completion_report = get_est_response_cost(completion_haiku, t0)
+    st.session_state.haiku_completion_report = get_response_summary(completion_haiku)
 
 
 
@@ -224,6 +213,9 @@ if st.button("Generate Haiku"):
 
 # 8) limerick
 if st.button("Generate Limerick"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
     with st.spinner("generating limerick..."):
         prompt = (
             f"Generate a limerick about the following wikipedia entry: "
@@ -248,7 +240,7 @@ if st.button("Generate Limerick"):
 
     st.session_state.limerick = limerick
     st.session_state.limerick_completion = completion_limerick
-    st.session_state.limerick_completion_report = get_est_response_cost(completion_limerick, t0)
+    st.session_state.limerick_completion_report = get_response_summary(completion_limerick)
 
     # st.write(limerick)
     # with st.expander("returned object"):
@@ -266,8 +258,7 @@ if st.session_state.summary is not None:
     #st.write(f"I counted {word_count} words in the summary returned by the LLM")
 
     if st.session_state.summary_completion_report is not None:
-        #print("267", st.session_state.summary_completion_report)
-        st.text(st.session_state.summary_completion_report)
+        st.code(st.session_state.summary_completion_report)
 
     if st.session_state.summary_completion is not None:
         with st.expander("Summary – raw completion object"):
@@ -279,7 +270,7 @@ if st.session_state.haiku is not None:
     st.write(st.session_state.haiku)
 
     if st.session_state.haiku_completion_report is not None:
-        st.text(st.session_state.haiku_completion_report)
+        st.code(st.session_state.haiku_completion_report)
 
     if st.session_state.haiku_completion is not None:
         with st.expander("Haiku – raw completion object"):
@@ -291,14 +282,14 @@ if st.session_state.limerick is not None:
     st.write(st.session_state.limerick)
 
     if st.session_state.limerick_completion_report is not None:
-        st.text(st.session_state.limerick_completion_report)
+        st.code(st.session_state.limerick_completion_report)
 
     if st.session_state.limerick_completion is not None:
         with st.expander("Limerick – raw completion object"):
             st.json(st.session_state.limerick_completion.model_dump())
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/006_wikipedia.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/007_ai-playground.py)")
 
 
 

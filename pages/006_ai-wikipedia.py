@@ -179,6 +179,10 @@ max_words = st.slider("Target length in words", min_value=1, max_value=100, valu
 
 # 6) show summary from chatgpt
 if st.button("Summarize with ChatGPT"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
+
     with st.spinner("Summarizing…"):
         t0 = time.time()
         prompt = (
@@ -206,6 +210,9 @@ if st.button("Summarize with ChatGPT"):
 
 # 7) haiku
 if st.button("Generate Haiku"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
     with st.spinner("generating haiku..."):
         prompt = (
             f"Generate a haiku about the following wikipedia entry: "
@@ -235,6 +242,9 @@ if st.button("Generate Haiku"):
 
 # 8) limerick
 if st.button("Generate Limerick"):
+    if not st.session_state.rate_limiter.allow():
+        st.error("Oops, I'm rate limited.  Please wait a bit and try again.   " + st.session_state.rate_limiter.status(verbose=True))
+        st.stop()
     with st.spinner("generating limerick..."):
         prompt = (
             f"Generate a limerick about the following wikipedia entry: "
@@ -309,7 +319,7 @@ if st.session_state.limerick is not None:
             st.json(st.session_state.limerick_completion.model_dump())
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/006_wikipedia.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/006_ai-wikipedia.py)")
 
 
 

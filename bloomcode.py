@@ -12,8 +12,8 @@ from logger import write_log, read_log, verify_session
 from rate_limiter import RateLimiter
 
 
-rate_limiter_max_requests = 10
-rate_limiter_inteval_seconds = 60
+rate_limiter_max_requests = 15
+rate_limiter_inteval_seconds = 300 # 5 minutes
 
 if  "rate_limiter" not in st.session_state:
     st.session_state.rate_limiter = RateLimiter(max_requests=rate_limiter_max_requests, interval_sec= rate_limiter_inteval_seconds )
@@ -59,11 +59,11 @@ with st.expander("What is apps.databloom.net?", expanded=False):
 
 msg_contents = r"""
 Some example apps are on the left.  Or you can click on stuff below...
+- TEMP: for right now  just use the menu on the left to find what's active
 - [streamlit reminders](streamlit_reminders) - a reference page I built for getting up to speed on streamlit. 
 - [logger](logger) - simple logging app
 - [echoer](echoer) - toy streamlit app to test reading and writing
 - [timer](timer) - stopwatch
-- TEMP: for right now  just use the menu on the left to find what's active
 - [ai1](ai01) - hello, chat gpt
 - chatter – simple chatting with LLMs
 - RAG Lite – doc Q&A prototype
