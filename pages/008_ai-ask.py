@@ -141,6 +141,6 @@ if st.session_state.transcript:
 
 
 st.markdown(
-    "[view code](https://github.com/databloomnet/databloom_codes/...)"
+    "[view code](https://github.com/databloomnet/databloom_codes/blob/main/pages/008_ai-ask.py)"
 )
 
