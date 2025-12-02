@@ -1,4 +1,4 @@
-# 005_ai01.py
+# 006_wikipedia.py
 
 import streamlit as st
 import datetime
@@ -41,7 +41,7 @@ def get_est_response_cost(response, t0 = 0):
     est1000cost = tt / (price_per_million * 1000000)
     out += f"\nGiven a cost of ($ {price_per_million} per million tokens), estimated cost to make this call 1000 times is ${est1000cost:.2f}"
     
-    print(out)
+    #print(out)
 
     return out
 
@@ -307,19 +307,6 @@ if st.session_state.limerick is not None:
     if st.session_state.limerick_completion is not None:
         with st.expander("Limerick – raw completion object"):
             st.json(st.session_state.limerick_completion.model_dump())
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/006_wikipedia.py)")

@@ -63,6 +63,7 @@ Some example apps are on the left.  Or you can click on stuff below...
 - [logger](logger) - simple logging app
 - [echoer](echoer) - toy streamlit app to test reading and writing
 - [timer](timer) - stopwatch
+- TEMP: for right now  just use the menu on the left to find what's active
 - [ai1](ai01) - hello, chat gpt
 - chatter – simple chatting with LLMs
 - RAG Lite – doc Q&A prototype
