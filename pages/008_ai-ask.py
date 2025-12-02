@@ -1,4 +1,4 @@
-# wikipedia-playground.py
+# ai-ask.py
 
 import streamlit as st
 import datetime

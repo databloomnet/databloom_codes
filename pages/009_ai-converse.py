@@ -1,183 +1,315 @@
-# wikipedia-playground.py
+# ai-converse.py
 
 import streamlit as st
 import datetime
 import time
 from dotenv import load_dotenv
 import os
-import wikipedia
 
 from rate_limiter import RateLimiter
 from openai import OpenAI
 import anthropic
 from response_parser import get_response_summary
-
-LLM_INPUT_CHAR_LIMIT = 2000
+from chatting import chat_with_gpt, chat_with_anthropic
 
 st.set_page_config(page_title="AI Converse", page_icon="💬")
 
+# -------------------------
+# constants
+# -------------------------
+MODEL_LIST = [
+        "gpt-4o-mini",            # .15
+        "gpt-5-mini",             # .25 input
+        "gpt-5-nano",             # .05 input
+        "claude-sonnet-4-5-20250929",
+        "claude-haiku-4-5-20251001",
+]
 
+MAX_TOKENS = 500
+DEFAULT_MODEL_INDEX = 4
+
+# -------------------------
+# API keys
+# -------------------------
 load_dotenv(override=True)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
-# Conversation history in session_state
+
+# -------------------------
+# Rate Limiter
+# -------------------------
+if "rate_limiter" not in st.session_state:
+    st.session_state.rate_limiter = RateLimiter(max_requests=10,interval_sec=300)
+
+
+# -------------------------
+# Session state init
+# -------------------------
 if "conversation" not in st.session_state:
-    st.session_state.conversation = []  # list of dicts: {time, model_label, question, answer}
+    # Each item: {"role": "user"|"assistant", "content": str}
+    st.session_state.conversation = []
+
+if "model" not in st.session_state:
+    st.session_state.model = MODEL_LIST[DEFAULT_MODEL_INDEX]
+
+if "model_index" not in st.session_state:
+    st.session_state.model_index = DEFAULT_MODEL_INDEX
+
+if "chat_locked" not in st.session_state:
+    # True once the first message is sent (locks model selection)
+    st.session_state.chat_locked = False
+
+# -------------------------
+# Sidebar: model selection & reset
+# -------------------------
+with st.sidebar:
+    st.header("Chat settings")
+
+    # Disable selection after first message to avoid midstream changes
+    disabled = st.session_state.chat_locked
 
 
-MODEL_OPTIONS = [
-    {
-        "label": "OpenAI – gpt-5 mini",
-        "provider": "openai",
-        "model": "gpt-5-mini",
-    },
-    {
-        "label": "OpenAI – gpt-5 nano",
-        "provider": "openai",
-        "model": "gpt-5-nano",
-    },
-    {
-        "label": "Anthropic: Sonnet 3.5",
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-5-20250929",
-    },
-    {
-        "label": "Anthropic: Haiku 4.5",
-        "provider": "anthropic",
-        "model": "claude-haiku-4-5-20251001",
-    },
-]
-
-
-
-
-# <rate limiter init>
-if  "rate_limiter" not in st.session_state:
-    st.session_state.rate_limiter = RateLimiter(max_requests=5,interval_sec=300)
-
-
-st.title("AI Converse 🤖💬")
-st.write(
-    "Select a model, type a message, and I’ll send it to that LLM and show the reply."
-)
-
-
-
-# choose model
-model_labels = [m["label"] for m in MODEL_OPTIONS]
-selected_label = st.selectbox("Choose model", model_labels, index=0)
-
-selected_cfg = next(m for m in MODEL_OPTIONS if m["label"] == selected_label)
-provider = selected_cfg["provider"]
-model_name = selected_cfg["model"]
-
-st.caption(f"Using **{provider}** / **{model_name}**")
-
-
-
-# message
-with st.form("chat_form"):
-    user_text = st.text_area(
-        "Your message",
-        value="Say hello and tell me a fun fact.",
-        height=12,
+    model = st.selectbox("Choose model:", 
+        options = MODEL_LIST,
+        index = st.session_state.model_index,
+        disabled = disabled,
+        help = "select a model to converse with",
     )
-    submitted = st.form_submit_button("Send")
+    # print("model:", model)
+    st.session_state.model = model
+    st.session_state.model_index = MODEL_LIST.index(model)
 
-# ---------- Helpers ----------
+    if st.button("Reset conversation", type="secondary"):
+        st.session_state.conversation = []
+        st.session_state.model_index = DEFAULT_MODEL_INDEX
+        st.session_state.model = MODEL_LIST[DEFAULT_MODEL_INDEX]
+        st.session_state.chat_locked = False
+        st.experimental_rerun()
 
-def call_openai_chat(model: str, message: str) -> tuple[str, dict | None]:
-    """
-    Returns (reply_text, usage_dict_or_None)
-    """
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is not set")
+# -------------------------
+# Main UI
+# -------------------------
+st.title("AI Converse")
+st.markdown("Chat with your selected LLM.  It will remember stuff while on this page.")
+st.caption(f"**Using model:** `{st.session_state.model}`")
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+# # Display conversation so far
+# for msg in st.session_state.conversation:
+#     with st.chat_message(msg["role"]):
+#         st.markdown(msg["content"])
 
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": message}],
-    )
+# Chat input (only active once a model is chosen)
 
-    reply = resp.choices[0].message.content
-    usage = getattr(resp, "usage", None)
-    # usage might have .total_tokens, .prompt_tokens, etc.
-    usage_dict = usage.model_dump() if usage is not None else None
-    return reply, usage_dict
+# with st.container():
+#     user_input = st.chat_input(
+#         "Type your message...2",
+#         disabled=(st.session_state.model is None),
+#     )
+    # st.text_input("Type your message", key="user_input")
+    #st.markdown("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai-converse.py)")
+
+# st.write(
+#     "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai_converse.py)"
+# )
 
 
-def call_anthropic_chat(model: str, message: str) -> tuple[str, dict | None]:
-    """
-    Returns (reply_text, usage_dict_or_None)
-    """
-    if not ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set")
+# -------------------------
+# once user input received
+# -------------------------
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+# if user_input:
+#     # Lock model for this conversation once first message is sent
+#     st.session_state.chat_locked = True
+#     model = st.session_state.model
 
-    resp = client.messages.create(
-        model=model,
-        max_tokens=512,
-        messages=[
-            {"role": "user", "content": message},
-        ],
-    )
+#     #print(f"127: {model}")
+#     # 1. Add user message to history and show it
+#     st.session_state.conversation.append({"role": "user", "content": user_input})
+#     with st.chat_message("user"):
+#         st.markdown(user_input)
 
-    # Anthropic's content is a list of blocks; simplest is first text block
-    if resp.content and resp.content[0].type == "text":
-        reply = resp.content[0].text
+#     # 2. Call the model with full history
+
+#     # print("user_input...")
+#     # print(st.session_state.model, st.session_state.model_index, st.session_state.chat_locked)
+#     # print(len(st.session_state.conversation))
+#     # for x in st.session_state.conversation:
+#     #     print(x)
+#     # print("...")
+
+
+#     with st.chat_message("assistant"):
+#         with st.spinner("Thinking..."):
+#             t0 = time.time()
+
+#             if model.startswith("gpt"):
+#                 answer, response = chat_with_gpt(model, user_input, st.session_state.conversation)
+#                 # answer = response.choices[0].message.content
+#             elif model.startswith("claude"):
+#                 answer, response = chat_with_anthropic(model, user_input, st.session_state.conversation)
+#                 # answer = response.choices[0].message.content
+#             else:
+#                 st.error("unknown model")
+#                 st.stop()
+
+#             st.markdown(answer)
+#             st.caption(f"_Response time: {time.time() - t0:0.2f} seconds_")
+
+
+#                     # {"role": m["role"], "content": m["content"]}
+#                     # for m in st.session_state.messages
+
+
+#             # response = client.chat.completions.create(
+#             #     model=model,
+#             #     messages=[
+#             #         {"role": m["role"], "content": m["content"]}
+#             #         for m in st.session_state.messages
+#             #     ],
+#             # )
+#             # t1 = time.time()
+
+#             # answer = response.choices[0].message.content
+#             # st.markdown(answer)
+#             # st.caption(f"_Response time: {t1 - t0:0.2f} seconds_")
+
+
+#     # 3. Append assistant reply to history
+
+#     st.session_state.conversation.append(
+#         {"role": "assistant", "content": answer}
+#     )
+
+#     # 3. Append assistant reply to history
+#     st.session_state.conversation.append(
+#         {"role": "assistant", "content": answer}
+#     )
+
+
+# -------------------------
+# UI: Collapsible history
+# -------------------------
+with st.expander("Conversation history", expanded=False):
+    if st.session_state.conversation:
+        for msg in st.session_state.conversation:
+            role = "You" if msg["role"] == "user" else "Assistant"
+            st.markdown(f"**{role}:** {msg['content']}")
     else:
-        reply = "<no text content>"
+        st.caption("nothing here yet...")
 
-    usage = getattr(resp, "usage", None)
-    # usage has input_tokens, output_tokens, etc.
-    usage_dict = usage.model_dump() if usage is not None else None
-    return reply, usage_dict
+# -------------------------
+# UI: last answer 
+# -------------------------
+last_answer = None
+for msg in reversed(st.session_state.conversation):
+    if msg["role"] == "assistant":
+        last_answer = msg["content"]
+        break
 
+if last_answer:
+    st.markdown("### Last answer")
+    st.write(last_answer)
 
-# ---------- Handle submit ----------
-
-if submitted:
-    if not user_text.strip():
-        st.warning("Please type a message before sending.")
-        st.stop()
-
-    # Basic key validation before we spin up the spinners
-    if provider == "openai" and not OPENAI_API_KEY:
-        st.error("OPENAI_API_KEY is missing. Check your environment.")
-        st.stop()
-    if provider == "anthropic" and not ANTHROPIC_API_KEY:
-        st.error("ANTHROPIC_API_KEY is missing. Check your environment.")
-        st.stop()
-
-    with st.spinner(f"Talking to {provider} ({model_name})..."):
-        t0 = time.time()
-        try:
-            if provider == "openai":
-                reply, usage = call_openai_chat(model_name, user_text)
-            elif provider == "anthropic":
-                reply, usage = call_anthropic_chat(model_name, user_text)
-            else:
-                raise ValueError(f"Unknown provider: {provider}")
-        except Exception as e:
-            st.error(f"Error calling {provider}: {e}")
-            st.stop()
-        t1 = time.time()
-
-    st.success(f"Response received in {t1 - t0:0.2f} seconds.")
-
-    st.markdown("### Model reply")
-    # auto-height-ish: use a small height; Streamlit will add scroll if needed
-    st.text_area(" ", value=reply, height=200)
-
-    # Optional: show token usage if available
-    if usage:
-        with st.expander("Token / usage details"):
-            st.json(usage)
-
-st.markdown(
-    "[view code](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai_converse.py)"
+# -------------------------
+# UI: input message
+# -------------------------
+# st.text_input - RETAINS VALUE AFTER RERUN, resulting in looping
+# with st.form("chat_form"):
+#     user_input = st.text_area(
+#         "Your message to the llm",
+#         value="Tell me a fun fact",
+#         height=10,
+#     )
+#     submitted = st.form_submit_button("Send")
+user_input = st.chat_input(
+    placeholder="Ask something… (press Enter to send)",
 )
+
+
+# -------------------------
+# UI: process when submitted
+# -------------------------
+if user_input:
+
+    # content = user_input.strip()
+    # if not content:
+    #     st.warning("Please type a message before sending.")
+    #     st.stop()
+
+    # Rate limiting
+    if not st.session_state.rate_limiter.allow():
+        st.error(
+            "Oops, I'm rate limited. Please wait a bit and try again.  "
+            + st.session_state.rate_limiter.status(verbose=True)
+        )
+        st.stop()
+
+    # Lock model after first user message
+    st.session_state.chat_locked = True
+    model = st.session_state.model
+
+    st.session_state.conversation.append(
+        {"role": "user", "content": user_input}
+    )
+
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+
+
+    # # Build messages with full history
+    # # Start with previous messages, then append new user msg
+    
+    # messages = list(st.session_state.conversation)
+    # #messages.append({"role": "user", "content": content})
+
+    # Call the model
+    # with st.spinner("Thinking..."):
+    #     t0 = time.time()
+
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            t0 = time.time()
+
+            if model.startswith("gpt"):
+                answer, response = chat_with_gpt(model, user_input, st.session_state.conversation)
+            elif model.startswith("claude"):
+                answer, response = chat_with_anthropic(model, user_input, st.session_state.conversation)
+            else:
+                st.error("unknown model")
+                st.stop()
+
+            st.markdown(answer)
+            st.caption(f"_Response time: {time.time() - t0:0.2f} seconds_")
+
+    st.session_state.conversation.append(
+        {"role": "assistant", "content": answer}
+    )
+
+    # Force a re-run so the "last answer" section updates cleanly
+    st.rerun()
+
+
+
+st.write("Script reran at", datetime.datetime.now())
+
+# -------------------------
+# 4) GitHub link directly under the input
+# -------------------------
+st.markdown(
+    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai_converse.py)"
+)
+
+# # Handle new user message
+# if user_input:
+#     # append user message to history
+#     st.session_state.conversation.append(
+#         {"role": "user", "content": user_input}
+#     )
+#     # trigger your existing logic that calls the model, etc.
+#     st.rerun()
+
+
 
