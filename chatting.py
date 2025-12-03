@@ -32,6 +32,18 @@ if "rate_limiter" not in st.session_state:
 # chat helpers
 # -------------------------
 
+def chat_with_llm(model, question, history):
+    if model.startswith("gpt"):
+        return chat_with_gpt(model, question, history)
+    elif model.startswith("claude"):
+        return chat_with_anthropic(model, question, history)
+    else:
+        print("error - model not recognized")
+        return
+
+
+
+
 # return response, but may be ignored
 def chat_with_gpt(model, question, history):
     new_history=[

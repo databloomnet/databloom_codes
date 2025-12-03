@@ -59,14 +59,20 @@ with st.expander("What is apps.databloom.net?", expanded=False):
 
 msg_contents = r"""
 Some example apps are on the left.  Or you can click on stuff below...
-- TEMP: for right now  just use the menu on the left to find what's active
-- [streamlit reminders](streamlit_reminders) - a reference page I built for getting up to speed on streamlit. 
-- [logger](logger) - simple logging app
-- [echoer](echoer) - toy streamlit app to test reading and writing
-- [timer](timer) - stopwatch
-- [ai1](ai01) - hello, chat gpt
-- chatter – simple chatting with LLMs
-- RAG Lite – doc Q&A prototype
+- some stuff I did to help me with streamlit...
+    - [streamlit reminders](streamlit_reminders) - a reference page I built for getting up to speed on streamlit. 
+    - [logger](logger) - simple logging app
+    - [echoer](echoer) - toy streamlit app to test reading and writing
+    - [timer](timer) - stopwatch
+- some actual genai stuff
+    - [ai-hello](ai-hello)
+    - [ai-wikipedia](ai-wikipedia)
+    - [ai-playground](ai-playground)
+    - [ai-ask](ai-ask)    
+    - [ai-converse](ai-converse)
+    - [ai-argue](ai-argue)
+- coming soon...
+    - RAG Lite – doc Q&A prototype
 """
 with st.expander("What can I do here?", expanded=True):
     st.markdown(msg_contents)
