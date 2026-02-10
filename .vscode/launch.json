@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Streamlit: run app",
+        "type": "python",
+        "request": "launch",
+        "module": "streamlit",
+        "args": ["run", "app.py"],
+        "cwd": "${workspaceFolder}/streamlit",
+        "python": "${workspaceFolder}/streamlit/.venv/bin/python",
+        "console": "integratedTerminal"
+      },
+      {
+        "name": "Gradio: run app",
+        "type": "python",
+        "request": "launch",
+        "program": "app.py",
+        "cwd": "${workspaceFolder}/gradio",
+        "python": "${workspaceFolder}/gradio/.venv/bin/python",
+        "console": "integratedTerminal"
+      }
+    ]
+  }
+  
+  

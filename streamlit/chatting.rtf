@@ -1,0 +1,122 @@
+{\rtf1\ansi\uc0\deff0{\fonttbl{\f0\fmodern\fprq1\fcharset0;}}
+{\colortbl;
+\red187\green187\blue187;
+\red61\green123\blue123;
+\red156\green101\blue0;
+\red0\green128\blue0;
+\red176\green0\blue64;
+\red102\green102\blue102;
+\red170\green34\blue255;
+\red0\green0\blue255;
+\red203\green63\blue56;
+\red25\green23\blue124;
+\red136\green0\blue0;
+\red118\green118\blue0;
+\red113\green113\blue113;
+\red104\green120\blue34;
+\red186\green33\blue33;
+\red164\green90\blue119;
+\red170\green93\blue31;
+\red0\green0\blue128;
+\red128\green0\blue128;
+\red160\green0\blue0;
+\red0\green132\blue0;
+\red228\green0\blue0;
+\red0\green68\blue221;
+\red255\green0\blue0;
+}
+\f0\sa0
+\dntblnsbdb
+{\cf2\i # chatting.py}{\cf1 \par}
+{\cf1 \par}
+{\cf4\b import}{\cf1  }{\cf8\b streamlit}{\cf1  }{\cf4\b as}{\cf1  }{\cf8\b st}{\cf1 \par}
+{\cf4\b import}{\cf1  }{\cf8\b datetime}{\cf1 \par}
+{\cf4\b import}{\cf1  }{\cf8\b time}{\cf1 \par}
+{\cf4\b from}{\cf1  }{\cf8\b dotenv}{\cf1  }{\cf4\b import} load_dotenv{\cf1 \par}
+{\cf4\b import}{\cf1  }{\cf8\b os}{\cf1 \par}
+{\cf1 \par}
+{\cf4\b from}{\cf1  }{\cf8\b rate_limiter}{\cf1  }{\cf4\b import} RateLimiter{\cf1 \par}
+{\cf1 \par}
+{\cf4\b from}{\cf1  }{\cf8\b openai}{\cf1  }{\cf4\b import} OpenAI{\cf1 \par}
+{\cf4\b import}{\cf1  }{\cf8\b anthropic}{\cf1 \par}
+{\cf1 \par}
+MAX_TOKENS {\cf6 =} {\cf6 500}{\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+{\cf2\i # API keys}{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+load_dotenv(override{\cf6 =}{\cf4\b True}){\cf1 \par}
+OPENAI_API_KEY {\cf6 =} os{\cf6 .}getenv({\cf15 '}{\cf15 OPENAI_API_KEY}{\cf15 '}){\cf1 \par}
+ANTHROPIC_API_KEY {\cf6 =} os{\cf6 .}getenv({\cf15 '}{\cf15 ANTHROPIC_API_KEY}{\cf15 '}){\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+{\cf2\i # Rate Limiter}{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+{\cf4\b if} {\cf15 "}{\cf15 rate_limiter}{\cf15 "} {\cf7\b not} {\cf7\b in} st{\cf6 .}session_state:{\cf1 \par}
+    st{\cf6 .}session_state{\cf6 .}rate_limiter {\cf6 =} RateLimiter(max_requests{\cf6 =}{\cf6 10},interval_sec{\cf6 =}{\cf6 300}){\cf1 \par}
+{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+{\cf2\i # chat helpers}{\cf1 \par}
+{\cf2\i # -------------------------}{\cf1 \par}
+{\cf1 \par}
+{\cf4\b def}{\cf1  }{\cf8 chat_with_llm}(model, question, history):{\cf1 \par}
+    {\cf4\b if} model{\cf6 .}startswith({\cf15 "}{\cf15 gpt}{\cf15 "}):{\cf1 \par}
+        {\cf4\b return} chat_with_gpt(model, question, history){\cf1 \par}
+    {\cf4\b elif} model{\cf6 .}startswith({\cf15 "}{\cf15 claude}{\cf15 "}):{\cf1 \par}
+        {\cf4\b return} chat_with_anthropic(model, question, history){\cf1 \par}
+    {\cf4\b else}:{\cf1 \par}
+        {\cf4 print}({\cf15 "}{\cf15 error - model not recognized}{\cf15 "}){\cf1 \par}
+        {\cf4\b return}{\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf2\i # return response, but may be ignored}{\cf1 \par}
+{\cf4\b def}{\cf1  }{\cf8 chat_with_gpt}(model, question, history):{\cf1 \par}
+    new_history{\cf6 =}[{\cf1 \par}
+        \{ {\cf15 "}{\cf15 role}{\cf15 "}: m[{\cf15 "}{\cf15 role}{\cf15 "}], {\cf15 "}{\cf15 content}{\cf15 "}: m[{\cf15 "}{\cf15 content}{\cf15 "}] \}{\cf1 \par}
+        {\cf4\b for} m {\cf7\b in} history{\cf1 \par}
+    ]{\cf1 \par}
+    new_history{\cf6 .}append(\{{\cf15 "}{\cf15 role}{\cf15 "}: {\cf15 "}{\cf15 user}{\cf15 "}, {\cf15 "}{\cf15 content}{\cf15 "}: question\}){\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+    client {\cf6 =} OpenAI(){\cf1 \par}
+    response {\cf6 =} client{\cf6 .}chat{\cf6 .}completions{\cf6 .}create({\cf1 \par}
+        model{\cf6 =}model,{\cf1 \par}
+        max_completion_tokens {\cf6 =} MAX_TOKENS {\cf6 *} {\cf6 100},{\cf1 \par}
+        messages {\cf6 =} new_history{\cf1 \par}
+        {\cf2\i # messages=[}{\cf1 \par}
+        {\cf2\i #     \{"role": "user", "content": question\},}{\cf1 \par}
+        {\cf2\i # ],}{\cf1 \par}
+    ){\cf1 \par}
+{\cf1 \par}
+    answer {\cf6 =} response{\cf6 .}choices[{\cf6 0}]{\cf6 .}message{\cf6 .}content{\cf1 \par}
+    {\cf4\b return} answer, response{\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+{\cf4\b def}{\cf1  }{\cf8 chat_with_anthropic}(model, question, history):{\cf1 \par}
+    new_history{\cf6 =}[{\cf1 \par}
+        \{ {\cf15 "}{\cf15 role}{\cf15 "}: m[{\cf15 "}{\cf15 role}{\cf15 "}], {\cf15 "}{\cf15 content}{\cf15 "}: m[{\cf15 "}{\cf15 content}{\cf15 "}] \}{\cf1 \par}
+        {\cf4\b for} m {\cf7\b in} history{\cf1 \par}
+    ]{\cf1 \par}
+    new_history{\cf6 .}append(\{{\cf15 "}{\cf15 role}{\cf15 "}: {\cf15 "}{\cf15 user}{\cf15 "}, {\cf15 "}{\cf15 content}{\cf15 "}: question\}){\cf1 \par}
+{\cf1 \par}
+{\cf1 \par}
+    client {\cf6 =} anthropic{\cf6 .}Anthropic(api_key{\cf6 =}ANTHROPIC_API_KEY){\cf1 \par}
+    response {\cf6 =} client{\cf6 .}messages{\cf6 .}create({\cf1 \par}
+        model{\cf6 =}model,{\cf1 \par}
+        max_tokens {\cf6 =} MAX_TOKENS,{\cf1 \par}
+        {\cf2\i # messages=[}{\cf1 \par}
+        {\cf2\i #     \{"role": "user", "content": question\},}{\cf1 \par}
+        {\cf2\i # ],}{\cf1 \par}
+        messages {\cf6 =} new_history,{\cf1 \par}
+    ){\cf1 \par}
+{\cf1 \par}
+    {\cf4\b if} response{\cf6 .}content {\cf7\b and} response{\cf6 .}content[{\cf6 0}]{\cf6 .}type {\cf6 ==} {\cf15 "}{\cf15 text}{\cf15 "}:{\cf1 \par}
+        answer {\cf6 =} response{\cf6 .}content[{\cf6 0}]{\cf6 .}text{\cf1 \par}
+    {\cf4\b else}:{\cf1 \par}
+        answer {\cf6 =} {\cf15 "}{\cf15 <no text content>}{\cf15 "}{\cf1 \par}
+    {\cf4\b return} answer, response{\cf1 \par}
+}

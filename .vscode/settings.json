@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/streamlit/.venv/bin/python",
+    "python.exclude": [
+      "**/anaconda3/**",
+      "**/miniconda3/**",
+      "/opt/anaconda3/**"
+    ]
+  }
+  

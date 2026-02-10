@@ -1,0 +1,47 @@
+{
+    "version": "1.0",
+    "domain": "logic",
+    "description": "Logic benchmark problems for comparing LLM reasoning, latency, and cost",
+    "problems": [
+        {
+            "id": "easy_001",
+            "difficulty": "1",
+            "category": "algebra",
+            "prompt": "What is 2 + 7?\nA) 27\n B) 9\n C) 5\n D) 14\n",
+            "answer_format": "multiple_choice",
+            "correct_answer": "B"
+        },
+        {
+            "id": "001",
+            "difficulty": "2",
+            "category": "algebra",
+            "prompt": "A box contains only red and blue balls. If there are 3 more red balls than blue balls, and there are 9 balls total, how many red balls are in the box?\nA) 3A\nB) 4\nC) 6\nD) 12\n",
+            "answer_format": "multiple_choice",
+            "correct_answer": "C"
+        },
+        {
+            "id": "medium_001",
+            "difficulty": "3",
+            "category": "logic_puzzle",
+            "prompt": "Alice and Bob are either truth-tellers (always tell the truth) or liars (always lie). Alice says: 'Bob is a liar.' Bob says: 'Alice and I are the same type.' Which statement is correct?\nA) Alice is a truth-teller, Bob is a liar\nB) Alice is a liar, Bob is a truth-teller\nC) Both are truth-tellers\nD) Both are liars\n",
+            "answer_format": "multiple_choice",
+            "correct_answer": "A"
+        },
+        {
+            "id": "medium_hard_001",
+            "difficulty": "4",
+            "category": "constraint_reasoning",
+            "prompt": "There are three switches (A, B, C) controlling three lights (1, 2, 3), but you don’t know which switch controls which light. You may do the following: (1) Turn switch A ON for 5 minutes, then turn it OFF. (2) Turn switch B ON. (3) Enter the room. You observe: Light 1 is ON; Light 2 is OFF but warm; Light 3 is OFF and cold. Which switch controls Light 2?\nA) Switch A\nB) Switch B\nC) Switch C\n",
+            "answer_format": "multiple_choice",
+            "correct_answer": "A"
+        },
+        {
+            "id": "hard_002",
+            "difficulty": "5",
+            "category": "constraint_logic_meta",
+            "prompt": "There are three boxes: A, B, and C. Exactly one box contains a prize. Each box has a label. Box A: 'The prize is not in this box.' Box B: 'The prize is not in box C.' Box C: 'The prize is in box B.' Exactly one of these labels is true. Which option must be correct?\nA) The prize is in box A\nB) The prize is in box B\nC) The prize is in box C\nD) The prize could be in box A or C\nE) The prize could be in box B or C\nF) The prize could be in box A or B\n",
+            "answer_format": "multiple_choice",
+            "correct_answer": "D"
+        }
+    ]
+}
