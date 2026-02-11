@@ -55,7 +55,6 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # <main>
-st.set_page_config(page_title="databloom.net GPT Summarizer") # tab name
 st.title("Wikipedia → ChatGPT Summarizer") # title page
 
 #model="gpt-4.1-nano" # max_tokens
@@ -289,7 +288,7 @@ if st.session_state.limerick is not None:
             st.json(st.session_state.limerick_completion.model_dump())
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/007_ai-playground.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/007_ai-playground.py)")
 
 
 

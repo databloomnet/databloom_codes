@@ -84,6 +84,6 @@ with tab3:
 
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/002_logger.py)")
-st.write("[code lib](https://github.com/databloomnet/databloom_codes/blob/main/logger.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/002_logger.py)")
+st.write("[code lib](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/logger.py)")
 

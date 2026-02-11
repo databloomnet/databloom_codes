@@ -12,8 +12,6 @@ import anthropic
 from response_parser import get_response_summary
 from chatting import chat_with_gpt, chat_with_anthropic
 
-st.set_page_config(page_title="AI Converse", page_icon="💬")
-
 # -------------------------
 # constants
 # -------------------------
@@ -85,7 +83,7 @@ with st.sidebar:
         st.session_state.model_index = DEFAULT_MODEL_INDEX
         st.session_state.model = MODEL_LIST[DEFAULT_MODEL_INDEX]
         st.session_state.chat_locked = False
-        st.experimental_rerun()
+        st.rerun()
 
 # -------------------------
 # Main UI
@@ -110,7 +108,7 @@ st.caption(f"**Using model:** `{st.session_state.model}`")
     #st.markdown("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai-converse.py)")
 
 # st.write(
-#     "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai_converse.py)"
+#     "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/009_ai-converse.py)"
 # )
 
 
@@ -299,7 +297,7 @@ st.write("Script reran at", datetime.datetime.now())
 # 4) GitHub link directly under the input
 # -------------------------
 st.markdown(
-    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai_converse.py)"
+    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/009_ai-converse.py)"
 )
 
 # # Handle new user message

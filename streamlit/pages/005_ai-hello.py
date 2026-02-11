@@ -128,4 +128,4 @@ if submitted:
 
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/005_ai-hello.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/005_ai-hello.py)")

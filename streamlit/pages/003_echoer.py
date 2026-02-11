@@ -122,4 +122,4 @@ if st.button("Send") and msg:
 
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/003_echoer.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/003_echoer.py)")

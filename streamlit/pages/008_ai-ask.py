@@ -21,9 +21,6 @@ load_dotenv(override=True)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
-st.set_page_config(page_title="AI Ask", page_icon="💬")
-
-
 MODEL_LIST = [
         "gpt-5-mini",
         "gpt-5-nano",
@@ -141,6 +138,6 @@ if st.session_state.transcript:
 
 
 st.markdown(
-    "[view code](https://github.com/databloomnet/databloom_codes/blob/main/pages/008_ai-ask.py)"
+    "[view code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/008_ai-ask.py)"
 )
 

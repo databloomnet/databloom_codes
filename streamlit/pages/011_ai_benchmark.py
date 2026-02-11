@@ -12,8 +12,6 @@ import anthropic
 from response_parser import get_response_summary
 #from chatting import chat_with_gpt, chat_with_anthropic, chat_with_llm
 
-st.set_page_config(page_title="AI Benchmark", page_icon="💬")
-
 # -------------------------
 # constants
 # -------------------------
@@ -358,6 +356,6 @@ st.write("Script ran at", datetime.datetime.now())
 # 4) GitHub link directly under the input
 # -------------------------
 st.markdown(
-    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/010_ai-argue.py)"
+    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/011_ai_benchmark.py)"
 )
 

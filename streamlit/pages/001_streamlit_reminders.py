@@ -399,4 +399,4 @@ with tab6:
         \end{array}
         """)
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/001_streamlit_reminders.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/001_streamlit_reminders.py)")

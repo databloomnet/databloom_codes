@@ -69,5 +69,5 @@ if num_clicks:
 
 
 
-st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/004_timer.py)")
+st.write("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/004_timer.py)")
 

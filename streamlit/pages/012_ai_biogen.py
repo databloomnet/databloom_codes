@@ -124,7 +124,6 @@ with st.sidebar:
 
 
 # page setup
-st.set_page_config(page_title="AI Intro Generator", page_icon="💬")
 st.title("AI Intro Generator")
 st.markdown("Generate introduction text by entering some info and related web sites.")
 
@@ -308,6 +307,6 @@ st.write("Script ran at", datetime.datetime.now())
 # 4) GitHub link directly under the input
 # -------------------------
 st.markdown(
-    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/pages/tbd.py)"
+    "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/012_ai_biogen.py)"
 )
 

@@ -44,7 +44,7 @@ sudo systemctl restart gradio-demo
 ## Architecture
 
 ### Streamlit App (`streamlit/`)
-Multi-page Streamlit app. `app.py` is the entry point; pages live in `pages/` with numeric prefixes controlling sidebar order (001–012). Pages range from utility demos (logger, timer) to AI-powered features (chat, debate, benchmarking).
+Multi-page Streamlit app using `st.navigation` for sidebar navigation with sections. `app.py` is the entry point and navigation router; it calls `st.set_page_config`, initializes the rate limiter, and declares all pages via `st.Page` grouped into sections ("AI Apps", "Tools"). Pages live in `pages/` with numeric prefixes. The home page is `pages/home.py` (registered with `default=True`).
 
 **Core modules:**
 - `chatting.py` — Unified LLM interface. `chat_with_llm()` routes to provider-specific functions (`chat_with_gpt()`, `chat_with_anthropic()`) based on model name prefix.
