@@ -283,6 +283,8 @@ if st.session_state.mode == MODE_REVISE:
     st.write(f"Bio by {st.session_state.model}:")
     st.markdown(st.session_state.bio)
 
+    with st.expander("To see prompt data, click to unfold", expanded=False):
+        st.code(st.session_state.prompt)
 
     st.subheader("Revisions")
     with st.form("Enter any requested revisions below..."):
