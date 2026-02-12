@@ -30,16 +30,6 @@ Regardless of why you're here, you're welcome to contact me at firstname @ bloom
 You can also find me on [LinkedIn](https://www.linkedin.com/in/jeremybloom/).
 """
 
-msg_updates = r"""
-**2/12** — I've been experimenting with different types and sizes of LLMs solving different problems.
-It's fascinating how models can perform so differently on the same task.
-I started some basic benchmarking, which you can see at [AI Benchmark](ai_benchmark).
-Right now these are all chat-tuned models via API; I may add some others.
-As always, all code is on [github](https://github.com/databloomnet/databloom_codes).
-"""
-with st.expander("Latest updates", expanded=True):
-    st.markdown(msg_updates)
-
 with st.expander("What is apps.databloom.net?", expanded=False):
     st.markdown(msg_intro)
 
