@@ -105,7 +105,7 @@ st.caption(f"**Using model:** `{st.session_state.model}`")
 #         disabled=(st.session_state.model is None),
 #     )
     # st.text_input("Type your message", key="user_input")
-    #st.markdown("[code](https://github.com/databloomnet/databloom_codes/blob/main/pages/009_ai-converse.py)")
+    #st.markdown("[code](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/009_ai-converse.py)")
 
 # st.write(
 #     "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/009_ai-converse.py)"

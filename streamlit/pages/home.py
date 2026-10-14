@@ -23,7 +23,7 @@ to demo, explain, or share more widely. Yes, I'm a full-fledged nerd, and I love
 For the *second group*, most of what you'll see are coding examples around GenAI and related topics.
 While I enjoy coding (and still do plenty of it), I don't think of myself primarily as a heads-down developer.
 I'm most interested in long-term Product (Management | Strategy | Owner) roles.
-For a broader view of my background and interests, check out [databloom.net](https://www.databloom.net).  One other note: I've never been too interested in front-end implementation.  I know enough about to get by,
+For a broader view of my background and interests, check out [databloom.net](https://databloom.net).  One other note: I've never been too interested in front-end implementation.  I know enough about to get by,
 but you may find the presentation it a little bare bones.
 
 Regardless of why you're here, you're welcome to contact me at firstname @ bloomfamily.com or firstname @ this domain (which forwards to the former).
