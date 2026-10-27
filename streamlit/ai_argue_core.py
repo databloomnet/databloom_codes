@@ -83,6 +83,11 @@ def parse_winner(ruling_text):
         return "unparsed"
     last = lines[-1].strip("*_`. ").upper()
     m = re.fullmatch(r"WINNER:\s*\**\s*([AB])", last)
+    if m:
+        return m.group(1)
+    # Fallback (pre-registered 2026-10-27, batch-1 amendment / batch 2): judges sometimes skip the
+    # WINNER line and open the ruling with "A wins." or "B wins." instead.
+    m = re.match(r"[*_`\s]*([AB])\s+WINS\b", lines[0].upper())
     return m.group(1) if m else "unparsed"
 
 

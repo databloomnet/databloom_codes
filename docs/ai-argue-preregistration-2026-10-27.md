@@ -34,3 +34,16 @@ Run exactly the reps listed. No early stopping and no added reps after seeing re
 ## Budget
 
 About 60 debates. Price one with `--dry-run --price` before the run. If the full batch costs more than the credit available, cut all reps proportionally rather than dropping a cell.
+
+---
+
+## Amendment 1, 2026-10-27 (written after batch 1 ran, before any re-run)
+
+**What happened.** 11 of 60 rulings came back `unparsed`. The judge (gpt-5-mini) skipped the required final `WINNER:` line. All 11 open with "B wins.", so none of the verdicts is ambiguous.
+
+**What we do.** Follow the stopping rule as written: re-run each unparsed rep once with `run_batch.py --rerun-failed`. Re-runs are parsed with a fallback added to `parse_winner()` before they ran. If there's no `WINNER:` line, a ruling whose first line opens "A wins"/"B wins" counts as that verdict. For each rep, the latest row is the result.
+
+**What we report.** The primary result is the original parsed rows plus the re-runs. As a sensitivity check, we also report the original 11 rulings classified by their "B wins." opener (all B). If the two disagree, both appear in the writeup.
+
+**Known confound, found in the results.** Seat B is three things at once: the *against* side, the second speaker, and, for this proposition, the side asserting a correct answer exists. Batch 1 can't separate these. Batch 2 (`ai-argue-preregistration-batch2-2026-10-27.md`) tests it.
+

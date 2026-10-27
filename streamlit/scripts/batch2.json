@@ -1,0 +1,20 @@
+{
+  "batch_id": "batch2",
+  "proposition": "there is a correct answer to the trolley problem",
+  "rounds": 3,
+  "defaults": {
+    "model_j": "gpt-5-mini",
+    "words_j1": 30,
+    "words_j8": 100
+  },
+  "conditions": [
+    {
+      "id": "S1-inv",
+      "model_a": "claude-haiku-4-5-20251001",
+      "words_a": 25,
+      "model_b": "claude-haiku-4-5-20251001",
+      "words_b": 25,
+      "reps": 20
+    }
+  ]
+}
