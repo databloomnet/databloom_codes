@@ -51,7 +51,7 @@ PROP_EXAMPLES = [
             "murder is always wrong",
             "the good of the many outweighs the good of the few",
             "democracy is always the best form of government",
-            "there is no solution to the trolley problem",
+            "there is no correct answer to the trolley problem",
             "Javier is the true hero of Les Miserable",
             ".jpg should be pronuced JAY-feg",
             "time travel is impossible",

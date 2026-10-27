@@ -1,6 +1,6 @@
 {
   "batch_id": "batch1",
-  "proposition": "TODO: pick one from the preset list and fix it (see docs/ai-argue-preregistration-2026-10-27.md)",
+  "proposition": "there is no correct answer to the trolley problem",
   "rounds": 3,
   "defaults": {"model_j": "gpt-5-mini", "words_j1": 30, "words_j8": 100},
   "conditions": [
