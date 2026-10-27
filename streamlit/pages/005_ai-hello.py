@@ -95,7 +95,7 @@ if submitted:
                 model="gpt-4.1-nano",
                 messages=[{"role": "user", "content": user_text}],
                 #max_output_tokens = 50
-                max_tokens = 50
+                max_completion_tokens = 50
             )
         except Exception as e:
             st.error(f"Model call failed: {e}")

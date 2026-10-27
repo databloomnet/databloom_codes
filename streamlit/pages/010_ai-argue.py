@@ -188,16 +188,20 @@ def call_llm(party_model, role_prompt, turn_prompt, conversation_history = []):
         if not OPENAI_API_KEY:
             raise RuntimeError("OPENAI_API_KEY is not set.")
         client = OpenAI(api_key=OPENAI_API_KEY)
+        # gpt-5 models are reasoning models: they reject max_tokens and temperature,
+        # and hidden reasoning tokens count against max_completion_tokens
+        extra_args = {"reasoning_effort": "minimal"} if party_model.startswith("gpt-5") else {}
         response = client.chat.completions.create(
             model=party_model,
             messages=[
                 {"role": "system", "content": prompts["PROMPT_BASELINE"]},
                 {"role": "user", "content": full_user_prompt},
             ],
-            max_tokens=MAX_TOKENS,
+            max_completion_tokens=MAX_TOKENS,
+            **extra_args,
         )
         #print(f"call_llm returning {resp.choices[0].message.content.strip()}")
-        message = response.choices[0].message.content.strip()
+        message = (response.choices[0].message.content or "").strip()
         return message
 
 

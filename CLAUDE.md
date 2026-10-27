@@ -35,11 +35,20 @@ cd streamlit
 pytest pages/test_benchmark_problems.py
 ```
 
-### Deployment (on EC2)
+### Deployment (EC2 host `walle`)
+Deploy is git-based. Nothing is copied from the Mac directly.
 ```bash
-sudo systemctl restart streamlit
-sudo systemctl restart gradio-demo
+git push                                          # from the Mac
+ssh walle 'cd ~/apps && git pull && sudo systemctl restart streamlit'   # or gradio-demo
 ```
+
+**walle differs from local dev:**
+- The repo is at `/home/ec2-user/apps`. API keys are in `~/apps/.env`, at the repo root; `load_dotenv()` finds it by searching upward from each page. Never read, print or copy `.env`.
+- The Streamlit venv is `~/apps/.venv` (repo root, **Python 3.11**, plain pip, no uv). Gradio has its own at `~/apps/gradio/.venv`.
+- Local dev is 3.12, so **avoid 3.12-only syntax** (for example PEP 701 nested f-string quotes, or the `type X = ...` statement): it works locally and breaks in production.
+- `git pull` does not install dependencies. After a `requirements.txt` change, run `ssh walle '~/apps/.venv/bin/pip install -r ~/apps/streamlit/requirements.txt'` before restarting.
+- The systemd config that actually runs is the drop-in `/etc/systemd/system/<unit>.service.d/override.conf`. The base units are stale.
+- Page URL slugs are set by `url_path=` in `streamlit/app.py`, and databloom.net deep-links to them (see the runbook §8). Don't change one without flagging it.
 
 ## Architecture
 
