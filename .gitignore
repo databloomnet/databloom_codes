@@ -26,3 +26,6 @@ pip-wheel-metadata/
 .env
 test*.py
 pages/archived-pages/
+
+# --- AI Argue visitor log (written on walle) ---
+streamlit/data/web_runs.db*

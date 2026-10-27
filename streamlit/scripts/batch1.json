@@ -1,0 +1,13 @@
+{
+  "batch_id": "batch1",
+  "proposition": "TODO: pick one from the preset list and fix it (see docs/ai-argue-preregistration-2026-10-27.md)",
+  "rounds": 3,
+  "defaults": {"model_j": "gpt-5-mini", "words_j1": 30, "words_j8": 100},
+  "conditions": [
+    {"id": "S1",  "model_a": "claude-haiku-4-5-20251001",  "words_a": 25,  "model_b": "claude-haiku-4-5-20251001",  "words_b": 25, "reps": 20},
+    {"id": "C0a", "model_a": "claude-sonnet-4-5-20250929", "words_a": 25,  "model_b": "claude-haiku-4-5-20251001",  "words_b": 25, "reps": 10},
+    {"id": "C0b", "model_a": "claude-haiku-4-5-20251001",  "words_a": 25,  "model_b": "claude-sonnet-4-5-20250929", "words_b": 25, "reps": 10},
+    {"id": "H1a", "model_a": "claude-haiku-4-5-20251001",  "words_a": 100, "model_b": "claude-sonnet-4-5-20250929", "words_b": 25, "reps": 10},
+    {"id": "H1b", "model_a": "claude-sonnet-4-5-20250929", "words_a": 25,  "model_b": "claude-haiku-4-5-20251001",  "words_b": 100, "reps": 10}
+  ]
+}

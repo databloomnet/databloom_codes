@@ -1,16 +1,16 @@
 # ai-argue.py
 
 import streamlit as st
+import contextlib
 import datetime
-import time
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+
+import pandas as pd
 
 from rate_limiter import RateLimiter
-from openai import OpenAI
-import anthropic
-from response_parser import get_response_summary
-#from chatting import chat_with_gpt, chat_with_anthropic, chat_with_llm
+from ai_argue_core import run_debate
+import ai_argue_store
 
 # -------------------------
 # constants
@@ -25,15 +25,6 @@ WORD_MAX_J8_DEFAULT = 100
 # Session state init
 # -------------------------
 
-# if "party_A" not in st.session_state:
-#     st.session_state.party_A = {}
-
-# if "party_B" not in st.session_state:
-#     st.session_state.party_B = {}
-
-# if "party_J" not in st.session_state:
-#     st.session_state.party_J = {}
-# are these used?
 if "parties_defined" not in st.session_state:
     st.session_state.parties_defined = False
 
@@ -55,8 +46,6 @@ if "party_J8_word_max" not in st.session_state:
     st.session_state.party_J8_word_max = WORD_MAX_J8_DEFAULT
 
 
-# chatgpt suggests I define these in a fucntion so I'm sure they'll get created AFTER any updates to st.session_state vars...
-
 PROP_EXAMPLES = [
             "P equals NP",
             "murder is always wrong",
@@ -68,48 +57,6 @@ PROP_EXAMPLES = [
             "time travel is impossible",
 ]
 
-
-def make_prompts():
-    return {
-
-        "PROMPT_BASELINE" : f'''
-            You are one of three participants in a polite and principled argument.  The participants are:
-            1) A - who will argue in favor of the proposition
-            2) B - who will argue against the proposition
-            3) J - a judge who decides who made the best argument and why. J should consider how well A and B respond to each other's statements.
-
-            The argument is structured as follows:
-            1) The rules are shared with all parties.
-            2) The proposition is shared with everyone
-            3) A, B, and J are assigned their roles
-            4) J shares, in {st.session_state.party_J1_word_max} words or less, how they will decide on the winner of the argument.  This should include how well A and B respond to each other's statements.  Let's call this the argument guidelines.
-            5) A makes the first statement, {st.session_state.party_A_word_max} words or less, in favor of the proposition.
-            6) B makes the next statement, {st.session_state.party_B_word_max} words or less, against the proposition.
-            7) Steps 5 and 6 repeat two more times, for a total of six statements.
-            8) J decides who won the argument and explains, in {st.session_state.party_J8_word_max} words or less, who won and the reasoning behind the decision.
-        ''',
-
-        "PROMPT_A" : "You are participant A, and will argue in favor of the proposition.",
-        "PROMPT_B" : "You are participant B, and will argue against the proposition",
-        "PROMPT_J" : ("You are the judge J. You will first share the argument guidelines, and after all statements you will decide the winner and explain your reasoning."),
-
-
-        "PROMPT_J_TURN_1" : (f"Follow step 4: Share the argument guidelines in {st.session_state.party_J1_word_max} words or less.  "
-                           f"Do NOT argue yet, just describe how you will judge."),
-
-        "PROMPT_J_TURN_8" : (f"Follow step 8: In {st.session_state.party_J8_word_max} words or less, decide who won the argument  "
-                           f"(A or B) and explain your reasoning. Be concise."),
-
-
-        "PROMPT_A_GO" : (f"Make your statement in favor of the proposition, "
-                       f"in {st.session_state.party_A_word_max} words or less. Respond to what has been said so far."),
-
-        "PROMPT_B_GO" : (f"Make your statement against the proposition, "
-                       f"in {st.session_state.party_B_word_max} words or less. Respond to what has been said so far."),
-    }
-
-# PLAYERS = ["A", "B", "J"]
-
 MODEL_LIST = [
         "gpt-4o-mini",            # .15
         "gpt-5-mini",             # .25 input
@@ -118,15 +65,22 @@ MODEL_LIST = [
         "claude-haiku-4-5-20251001",
 ]
 
-MAX_TOKENS = 1000
 DEFAULT_MODEL_INDEX = 4
 
+SPINNER_TEXT = {
+    "guidelines": "J (judge) is thinking about the guidelines...",
+    "A": "Round {round_num}: A is thinking...",
+    "B": "Round {round_num}: B is thinking...",
+    "ruling": "J is deciding...",
+}
+
+# Columns shown in Explore results, and the ones offered as filters
+FILTER_COLUMNS = ["batch_id", "condition", "model_a", "model_b", "model_j", "winner", "status"]
+
 # -------------------------
-# API keys
+# API keys (read by ai_argue_core)
 # -------------------------
 load_dotenv(override=True)
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 
 # -------------------------
@@ -144,199 +98,164 @@ if "rate_limiter" not in st.session_state:
 st.title("AI Argue")
 st.markdown("Let's start an argument." "(inspired by [Argument - Monty Python](https://www.youtube.com/watch?v=ohDB5gbtaEQ)")
 
+tab_run, tab_explore, tab_analysis = st.tabs(["Run a debate", "Explore results", "Analysis"])
 
+# The other tabs are filled first, so an st.stop() in "Run a debate" can't blank them.
 
-st.markdown("Pick a proposition:")
-proposition= st.radio("Select a proposition:", PROP_EXAMPLES)
+# -------------------------
+# Explore results (curated batch data, read-only)
+# -------------------------
+with tab_explore:
+    df = None
+    if os.path.exists(ai_argue_store.CURATED_DB):
+        try:
+            conn = ai_argue_store.connect_readonly(ai_argue_store.CURATED_DB)
+            try:
+                df = pd.read_sql_query("SELECT * FROM debates ORDER BY timestamp_utc", conn)
+            finally:
+                conn.close()
+        except Exception as e:
+            print(f"ai-argue: could not read {ai_argue_store.CURATED_DB}: {e!r}")
 
-st.markdown("Pick LLMs and word limits for each party")
+    if df is None or df.empty:
+        st.info("No batch results yet. They'll appear here once the first batch has run.")
+    else:
+        filter_cols = st.columns(len(FILTER_COLUMNS))
+        for col, name in zip(filter_cols, FILTER_COLUMNS):
+            options = sorted(df[name].dropna().astype(str).unique())
+            chosen = col.multiselect(name, options, key=f"filter_{name}")
+            if chosen:
+                df = df[df[name].astype(str).isin(chosen)]
 
-
-col1, col2 = st.columns(2)
-with col1:
-    party_A_model = st.selectbox("Select Party A model:", MODEL_LIST, index = 4)
-    party_B_model = st.selectbox("Select Party B model:", MODEL_LIST, index = 4)
-    party_J_model = st.selectbox("Select Party J model:", MODEL_LIST, index = 4)
-
-with col2:
-    party_A_word_max = st.number_input("Max words A can use per statement", min_value = 5, max_value = 40, key = "party_A_word_max", step = 5)
-    party_B_word_max = st.number_input("Max words B can use per statement", min_value = 5, max_value = 40, key = "party_B_word_max", step = 5)
-    party_J1_word_max = st.number_input("Max words J can use for guidelines", min_value = 5, max_value = 40, key = "party_J1_word_max", step = 5)
-    party_J8_word_max = st.number_input("Max words J can use for final ruling", min_value = 5, max_value = 120, key = "party_J8_word_max", step = 5)
-
-
-st.divider()
-
-
-
-
-
-
-def call_llm(party_model, role_prompt, turn_prompt, conversation_history = []):
-
-    conversation_so_far = "\n".join(conversation_history)
-
-    full_user_prompt = (
-        f"{role_prompt}\n\n"
-        f"Proposition: {st.session_state.proposition}\n\n"
-        f"Conversation so far:\n{conversation_so_far}\n\n"
-        f"{turn_prompt}\n\n"
-    )
-
-
-    if party_model.startswith("gpt"):
-        if not OPENAI_API_KEY:
-            raise RuntimeError("OPENAI_API_KEY is not set.")
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        # gpt-5 models are reasoning models: they reject max_tokens and temperature,
-        # and hidden reasoning tokens count against max_completion_tokens
-        extra_args = {"reasoning_effort": "minimal"} if party_model.startswith("gpt-5") else {}
-        response = client.chat.completions.create(
-            model=party_model,
-            messages=[
-                {"role": "system", "content": prompts["PROMPT_BASELINE"]},
-                {"role": "user", "content": full_user_prompt},
-            ],
-            max_completion_tokens=MAX_TOKENS,
-            **extra_args,
+        st.caption(f"{len(df)} debates")
+        st.dataframe(df[ai_argue_store.COLUMNS], hide_index=True)
+        st.download_button(
+            "Download CSV",
+            df[ai_argue_store.COLUMNS].to_csv(index=False),
+            file_name="ai_argue_debates.csv",
+            mime="text/csv",
         )
-        #print(f"call_llm returning {resp.choices[0].message.content.strip()}")
-        message = (response.choices[0].message.content or "").strip()
-        return message
 
-
-    if party_model.startswith("claude"):
-            if not ANTHROPIC_API_KEY:
-                raise RuntimeError("ANTHROPIC_API_KEY is not set.")
-            client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model=party_model,
-                max_tokens=MAX_TOKENS,
-                system=prompts["PROMPT_BASELINE"],
-                messages=[
-                    {"role": "user", "content": full_user_prompt},
-                ],
-            )
-
-            # Anthropic returns a list of content blocks - sometimes? 
-            message = response.content[0].text
-            return message
-    print(f"error - unk model {party_model}")
-    raise ValueError(f"Unknown model name: {party_model}")
-# ------
-
-
+# -------------------------
+# Analysis
+# -------------------------
+with tab_analysis:
+    st.info("First results coming.")
 
 
 # -------------------------
-# Start argument button
+# Run a debate
 # -------------------------
-if st.button("Start the argument 🥊"):
-    # Rate limit check
-    if not st.session_state.rate_limiter.allow():
-        st.error(
-            "Oops, you're rate limited. "
-            + st.session_state.rate_limiter.status(verbose=True)
-        )
-        st.stop()
+with tab_run:
 
-    prompts = make_prompts()
+    st.markdown("Pick a proposition:")
+    proposition= st.radio("Select a proposition:", PROP_EXAMPLES)
+
+    st.markdown("Pick LLMs and word limits for each party")
 
 
+    col1, col2 = st.columns(2)
+    with col1:
+        party_A_model = st.selectbox("Select Party A model:", MODEL_LIST, index = DEFAULT_MODEL_INDEX)
+        party_B_model = st.selectbox("Select Party B model:", MODEL_LIST, index = DEFAULT_MODEL_INDEX)
+        party_J_model = st.selectbox("Select Party J model:", MODEL_LIST, index = DEFAULT_MODEL_INDEX)
 
-    st.session_state.party_A = {"model": party_A_model}
-    st.session_state.party_B = {"model": party_B_model}
-    st.session_state.party_J = {"model": party_J_model}
-    st.session_state.parties_defined = True
-    st.session_state.proposition = proposition
+    with col2:
+        party_A_word_max = st.number_input("Max words A can use per statement", min_value = 5, max_value = 40, key = "party_A_word_max", step = 5)
+        party_B_word_max = st.number_input("Max words B can use per statement", min_value = 5, max_value = 40, key = "party_B_word_max", step = 5)
+        party_J1_word_max = st.number_input("Max words J can use for guidelines", min_value = 5, max_value = 40, key = "party_J1_word_max", step = 5)
+        party_J8_word_max = st.number_input("Max words J can use for final ruling", min_value = 5, max_value = 120, key = "party_J8_word_max", step = 5)
 
-    # reset history/result
-    st.session_state.conversation_history = []
-    st.session_state.argument_result = None
-
-    output_area = st.container()
-
-    conversation_history = st.session_state.conversation_history
-
-
-    print("let's rumble!")
-
-
-    # --- Step 4: J gives argument guidelines ---
-    with output_area:
-        with st.spinner("J (judge) is thinking about the guidelines..."):
-            guidelines = call_llm(
-                party_J_model,
-                prompts["PROMPT_J"],
-                prompts["PROMPT_J_TURN_1"],
-                conversation_history,
-            )
-        st.markdown("**J (guidelines):** " + guidelines)
-    conversation_history.append(f"J: {guidelines}")
 
     st.divider()
 
-    # --- Steps 5–7: 3 rounds of A / B ---
-    for arg_round in range(1, 4):
-        with output_area:
-            st.markdown(f"### Round {arg_round}")
 
-        with output_area:
-            with st.spinner(f"Round {arg_round}: A is thinking..."):
-                arg_A_response = call_llm(
-                    party_A_model,
-                    prompts["PROMPT_A"],
-                    prompts["PROMPT_A_GO"],
-                    conversation_history,
-                )
-            st.markdown(f"**A (round {arg_round}):** {arg_A_response}")
-        conversation_history.append(f"A (round {arg_round}): {arg_A_response}")
+    # -------------------------
+    # Start argument button
+    # -------------------------
+    start_clicked = st.button("Start the argument 🥊")
+    st.caption("Debates run here are logged anonymously for research.")
 
-        with output_area:
-            with st.spinner(f"Round {arg_round}: B is thinking..."):
-                arg_B_response = call_llm(
-                    party_B_model,
-                    prompts["PROMPT_B"],
-                    prompts["PROMPT_B_GO"],
-                    conversation_history,
-                )
-            st.markdown(f"**B (round {arg_round}):** {arg_B_response}")
-        conversation_history.append(f"B (round {arg_round}): {arg_B_response}")
-    
-        with output_area:
-            st.divider()
-
-    # --- Step 8: J decides ---
-    with output_area:
-        with st.spinner("J is deciding..."):
-            results = call_llm(
-                party_J_model,
-                prompts["PROMPT_J"],
-                prompts["PROMPT_J_TURN_8"],
-                conversation_history,
+    if start_clicked:
+        # Rate limit check
+        if not st.session_state.rate_limiter.allow():
+            st.error(
+                "Oops, you're rate limited. "
+                + st.session_state.rate_limiter.status(verbose=True)
             )
-        st.markdown("### Judge J's decision")
-        st.write(results)
+            st.stop()
 
-    conversation_history.append(f"J (decision): {results}")
-    st.session_state.argument_result = results
+        st.session_state.party_A = {"model": party_A_model}
+        st.session_state.party_B = {"model": party_B_model}
+        st.session_state.party_J = {"model": party_J_model}
+        st.session_state.parties_defined = True
+        st.session_state.proposition = proposition
 
-    st.session_state.conversation_history = conversation_history
+        # reset history/result
+        st.session_state.conversation_history = []
+        st.session_state.argument_result = None
+
+        output_area = st.container()
+        st.divider()
+
+        @contextlib.contextmanager
+        def turn_context(step, round_num):
+            if step == "A":
+                output_area.markdown(f"### Round {round_num}")
+            with output_area:
+                with st.spinner(SPINNER_TEXT[step].format(round_num=round_num)):
+                    yield
+
+        def on_statement(step, round_num, text):
+            if step == "guidelines":
+                output_area.markdown("**J (guidelines):** " + text)
+            elif step in ("A", "B"):
+                output_area.markdown(f"**{step} (round {round_num}):** {text}")
+                if step == "B":
+                    output_area.divider()
+            elif step == "ruling":
+                output_area.markdown("### Judge J's decision")
+                output_area.write(text)
+
+        print("let's rumble!")
+        result = run_debate(
+            proposition,
+            party_A_model, party_B_model, party_J_model,
+            party_A_word_max, party_B_word_max, party_J1_word_max, party_J8_word_max,
+            turn_context=turn_context,
+            on_statement=on_statement,
+        )
+
+        if result["status"] == "error":
+            output_area.error("The argument stopped early: a model call failed twice. Please try again.")
+
+        st.session_state.conversation_history = result["conversation_history"]
+        st.session_state.argument_result = result["ruling_text"]
+
+        # Anonymous visitor log: only the schema's fields, no IP / session / user agent
+        try:
+            conn = ai_argue_store.connect(ai_argue_store.WEB_DB, wal=True)
+            try:
+                ai_argue_store.insert_row(conn, ai_argue_store.make_row(result, source="web"))
+            finally:
+                conn.close()
+        except Exception as e:
+            print(f"ai-argue: could not log web run: {e!r}")
 
 
 
-st.divider()
-with st.expander("Full argument transcript", expanded=False):
-    if st.session_state.conversation_history:
-        for line in st.session_state.conversation_history:
-            st.markdown(line)
-    else:
-        st.caption("No argument yet — press the button above to start.")
+    st.divider()
+    with st.expander("Full argument transcript", expanded=False):
+        if st.session_state.conversation_history:
+            for line in st.session_state.conversation_history:
+                st.markdown(line)
+        else:
+            st.caption("No argument yet — press the button above to start.")
 
 
 
 
-st.write("Script ran at", datetime.datetime.now())
+    st.write("Script ran at", datetime.datetime.now())
 
 # -------------------------
 # 4) GitHub link directly under the input
@@ -344,4 +263,3 @@ st.write("Script ran at", datetime.datetime.now())
 st.markdown(
     "[code_on_github](https://github.com/databloomnet/databloom_codes/blob/main/streamlit/pages/010_ai-argue.py)"
 )
-
