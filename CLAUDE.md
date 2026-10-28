@@ -47,6 +47,7 @@ ssh walle 'cd ~/apps && git pull && sudo systemctl restart streamlit'   # or gra
 - The Streamlit venv is `~/apps/.venv` (repo root, **Python 3.11**, plain pip, no uv). Gradio has its own at `~/apps/gradio/.venv`.
 - Local dev is 3.12, so **avoid 3.12-only syntax** (for example PEP 701 nested f-string quotes, or the `type X = ...` statement): it works locally and breaks in production.
 - `git pull` does not install dependencies. After a `requirements.txt` change, run `ssh walle '~/apps/.venv/bin/pip install -r ~/apps/streamlit/requirements.txt'` before restarting.
+- **A third service, `databloom-mcp`,** serves the AI Argue MCP server: `~/apps/mcp`, its own venv `~/apps/mcp/.venv`, `127.0.0.1:8000/mcp`, public at `https://apps.databloom.net/mcp` through Nginx. After changing `mcp/server.py` or `streamlit/data/debates.db`, also run `sudo systemctl restart databloom-mcp`. Test it with `docs/ai-argue-mcp-testing.md`.
 - The systemd config that actually runs is the drop-in `/etc/systemd/system/<unit>.service.d/override.conf`. The base units are stale.
 - Page URL slugs are set by `url_path=` in `streamlit/app.py`, and databloom.net deep-links to them (see the runbook §8). Don't change one without flagging it.
 
