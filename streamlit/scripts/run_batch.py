@@ -18,6 +18,7 @@
 #     ]
 #   }
 # Any condition key can also go in "defaults"; a condition overrides it.
+# Optional key "first_speaker": "A" (default) or "B" (batch 3: B, against, speaks first).
 #
 # Resumable: reps already in the db for this batch_id are skipped.
 # --rerun-failed re-runs, once, any rep whose only row ended "error" or "unparsed".
@@ -59,7 +60,7 @@ def load_config(path):
     else:
         config = json.loads(text)
 
-    base = {"proposition": config.get("proposition"), "rounds": config.get("rounds", 3)}
+    base = {"proposition": config.get("proposition"), "rounds": config.get("rounds", 3), "first_speaker": "A"}
     base.update(config.get("defaults", {}))
     conditions = []
     for cond in config["conditions"]:
@@ -67,6 +68,8 @@ def load_config(path):
         missing = [k for k in REQUIRED_KEYS if merged.get(k) in (None, "")]
         if missing:
             sys.exit(f"Condition {cond.get('id')!r} is missing: {', '.join(missing)}")
+        if merged["first_speaker"] not in ("A", "B"):
+            sys.exit(f"Condition {cond.get('id')!r}: first_speaker must be 'A' or 'B'")
         conditions.append(merged)
     return config["batch_id"], conditions
 
@@ -84,7 +87,7 @@ def debate_args(cond):
         model_a=cond["model_a"], model_b=cond["model_b"], model_j=cond["model_j"],
         words_a=cond["words_a"], words_b=cond["words_b"],
         words_j1=cond["words_j1"], words_j8=cond["words_j8"],
-        rounds=cond["rounds"],
+        rounds=cond["rounds"], first_speaker=cond["first_speaker"],
     )
 
 
@@ -119,10 +122,12 @@ def estimate_batch_cost(sample, sample_cond, conditions):
 
 def dry_run(conditions, show_price):
     cond = conditions[0]
-    print(f"Dry run: one debate for condition {cond['id']} (nothing is written to the db)")
+    print(f"Dry run: one debate for condition {cond['id']}, first_speaker={cond['first_speaker']} "
+          f"(nothing is written to the db)")
     t0 = time.time()
     result = run_debate(**debate_args(cond))
-    print(f"status={result['status']} winner={result['winner']} ({time.time() - t0:.0f}s)")
+    print(f"status={result['status']} winner={result['winner']} first_speaker={result['first_speaker']} "
+          f"judge_prompt_hash={result['judge_prompt_hash'][:16]} ({time.time() - t0:.0f}s)")
     if result["error"]:
         print(f"error: {result['error']}")
     for s in result["statements"]:

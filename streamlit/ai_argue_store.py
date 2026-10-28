@@ -17,7 +17,7 @@ COLUMNS = [
     "run_id", "batch_id", "condition", "rep", "timestamp_utc", "proposition",
     "model_a", "model_b", "model_j", "words_a", "words_b", "words_j_guidelines", "words_j_ruling",
     "rounds", "temperature", "winner", "ruling_text", "transcript_json", "judge_prompt_hash",
-    "judge_disclosed_word_limits", "tokens_in", "tokens_out", "status", "source",
+    "judge_disclosed_word_limits", "tokens_in", "tokens_out", "status", "source", "first_speaker",
 ]
 
 CREATE_TABLE = """
@@ -45,9 +45,13 @@ CREATE TABLE IF NOT EXISTS debates (
     tokens_in INTEGER,
     tokens_out INTEGER,
     status TEXT,
-    source TEXT
+    source TEXT,
+    first_speaker TEXT
 )
 """
+
+# Batch 3 added first_speaker. Rows written before it (batches 1-2, older web runs) all had A first.
+ADD_FIRST_SPEAKER = "ALTER TABLE debates ADD COLUMN first_speaker TEXT DEFAULT 'A'"
 
 
 def connect(path, wal=False):
@@ -58,6 +62,9 @@ def connect(path, wal=False):
     if wal:
         conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(CREATE_TABLE)
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(debates)")}
+    if "first_speaker" not in existing:
+        conn.execute(ADD_FIRST_SPEAKER)
     conn.commit()
     return conn
 
@@ -97,6 +104,7 @@ def make_row(result, source, batch_id=None, condition=None, rep=None):
         "tokens_out": result["tokens_out"],
         "status": result["status"],
         "source": source,
+        "first_speaker": result.get("first_speaker", "A"),
     }
 
 

@@ -61,17 +61,41 @@ PROMPT_TEMPLATES = {
 }
 
 
-def make_prompts(words_a, words_b, words_j1, words_j8):
+# Batch 3 (pre-registered 2026-10-28): B may speak first. Only steps 5-7 of the baseline change;
+# A still argues for and B against. The default "A" templates are untouched, so batches 1-2 keep their hash.
+ORDER_LINES_A_FIRST = """            5) A makes the first statement, {words_a} words or less, in favor of the proposition.
+            6) B makes the next statement, {words_b} words or less, against the proposition.
+            7) Steps 5 and 6 repeat two more times, for a total of six statements."""
+ORDER_LINES_B_FIRST = """            5) B makes the first statement, {words_b} words or less, against the proposition.
+            6) A makes the next statement, {words_a} words or less, in favor of the proposition.
+            7) Steps 5 and 6 repeat two more times, for a total of six statements."""
+assert ORDER_LINES_A_FIRST in PROMPT_TEMPLATES["PROMPT_BASELINE"]
+
+FIRST_SPEAKERS = ("A", "B")
+
+
+def prompt_templates(first_speaker="A"):
+    """The unfilled templates for the given speaking order."""
+    if first_speaker not in FIRST_SPEAKERS:
+        raise ValueError(f"first_speaker must be 'A' or 'B', not {first_speaker!r}")
+    if first_speaker == "A":
+        return PROMPT_TEMPLATES
+    baseline = PROMPT_TEMPLATES["PROMPT_BASELINE"].replace(ORDER_LINES_A_FIRST, ORDER_LINES_B_FIRST)
+    return {**PROMPT_TEMPLATES, "PROMPT_BASELINE": baseline}
+
+
+def make_prompts(words_a, words_b, words_j1, words_j8, first_speaker="A"):
     limits = {"words_a": words_a, "words_b": words_b, "words_j1": words_j1, "words_j8": words_j8}
-    return {name: template.format(**limits) for name, template in PROMPT_TEMPLATES.items()}
+    return {name: template.format(**limits) for name, template in prompt_templates(first_speaker).items()}
 
 
-def judge_prompt_hash():
+def judge_prompt_hash(first_speaker="A"):
     """sha256 of the judge's system prompt plus both judge turn templates, before word limits are filled in."""
+    templates = prompt_templates(first_speaker)
     text = "\n".join([
-        PROMPT_TEMPLATES["PROMPT_BASELINE"],
-        PROMPT_TEMPLATES["PROMPT_J_TURN_1"],
-        PROMPT_TEMPLATES["PROMPT_J_TURN_8"],
+        templates["PROMPT_BASELINE"],
+        templates["PROMPT_J_TURN_1"],
+        templates["PROMPT_J_TURN_8"],
     ])
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -169,18 +193,19 @@ def _call_with_retry(*args):
 # -------------------------
 
 def run_debate(proposition, model_a, model_b, model_j, words_a, words_b, words_j1, words_j8, rounds=3,
-               turn_context=None, on_statement=None):
+               first_speaker="A", turn_context=None, on_statement=None):
     """Run one full debate and return a dict with the guidelines, statements, ruling, winner and token usage.
 
     Optional UI hooks (the page uses these; the batch script doesn't):
       turn_context(step, round_num) -> context manager wrapped around each LLM call
       on_statement(step, round_num, text) -> called after each statement
     step is one of "guidelines", "A", "B", "ruling".
+    first_speaker "A" (the default) or "B" sets who speaks first each round; A always argues for, B against.
     """
     turn_context = turn_context or (lambda step, round_num: contextlib.nullcontext())
     on_statement = on_statement or (lambda step, round_num, text: None)
 
-    prompts = make_prompts(words_a, words_b, words_j1, words_j8)
+    prompts = make_prompts(words_a, words_b, words_j1, words_j8, first_speaker)
     system_prompt = prompts["PROMPT_BASELINE"]
 
     result = {
@@ -194,7 +219,8 @@ def run_debate(proposition, model_a, model_b, model_j, words_a, words_b, words_j
         "words_j1": words_j1,
         "words_j8": words_j8,
         "rounds": rounds,
-        "judge_prompt_hash": judge_prompt_hash(),
+        "first_speaker": first_speaker,
+        "judge_prompt_hash": judge_prompt_hash(first_speaker),
         "guidelines": None,
         "statements": [],          # [{"step", "round", "model", "text"}]
         "ruling_text": None,
@@ -223,12 +249,16 @@ def run_debate(proposition, model_a, model_b, model_j, words_a, words_b, words_j
         result["guidelines"] = guidelines
         history.append(f"J: {guidelines}")
 
-        # Steps 5-7: rounds of A / B
+        # Steps 5-7: rounds of A / B, in speaking order
+        seats = {
+            "A": (model_a, prompts["PROMPT_A"], prompts["PROMPT_A_GO"]),
+            "B": (model_b, prompts["PROMPT_B"], prompts["PROMPT_B_GO"]),
+        }
+        order = ("A", "B") if first_speaker == "A" else ("B", "A")
         for arg_round in range(1, rounds + 1):
-            arg_a = turn("A", arg_round, model_a, prompts["PROMPT_A"], prompts["PROMPT_A_GO"])
-            history.append(f"A (round {arg_round}): {arg_a}")
-            arg_b = turn("B", arg_round, model_b, prompts["PROMPT_B"], prompts["PROMPT_B_GO"])
-            history.append(f"B (round {arg_round}): {arg_b}")
+            for seat in order:
+                arg = turn(seat, arg_round, *seats[seat])
+                history.append(f"{seat} (round {arg_round}): {arg}")
 
         # Step 8: J decides
         ruling = turn("ruling", rounds + 1, model_j, prompts["PROMPT_J"], prompts["PROMPT_J_TURN_8"])

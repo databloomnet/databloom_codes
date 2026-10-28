@@ -26,38 +26,40 @@ REPO = "https://github.com/databloomnet/databloom_codes/blob/main"
 LINKS = {
     "preregistration_batch1": REPO + "/docs/ai-argue-preregistration-2026-10-27.md",
     "preregistration_batch2": REPO + "/docs/ai-argue-preregistration-batch2-2026-10-27.md",
+    "preregistration_batch3": REPO + "/docs/ai-argue-preregistration-batch3-2026-10-28.md",
     "results": REPO + "/docs/ai-argue-results-2026-10-27.md",
     "app": "https://apps.databloom.net/ai-argue",
 }
 
 # The weaker of the two debater models, for wordcap_effect.
 WEAKER_MODEL = "claude-haiku-4-5-20251001"
-IDENTICAL_CONDITIONS = ("S1", "S1-inv")
+IDENTICAL_CONDITIONS = ("S1", "S1-inv", "S1-rev")
 
 SUMMARY_COLUMNS = [
     "run_id", "batch_id", "condition", "rep", "timestamp_utc", "proposition",
-    "model_a", "model_b", "model_j", "words_a", "words_b", "winner", "status",
+    "model_a", "model_b", "model_j", "words_a", "words_b", "first_speaker", "winner", "status",
 ]
 
 COLUMN_MEANINGS = {
     "run_id": "Unique id of one debate run (UUID). Pass it to get_debate.",
-    "batch_id": "Pre-registered batch: batch1 or batch2.",
-    "condition": "Experimental cell within the batch (S1, C0a, C0b, H1a, H1b, S1-inv).",
+    "batch_id": "Pre-registered batch: batch1, batch2 or batch3.",
+    "condition": "Experimental cell within the batch (S1, C0a, C0b, H1a, H1b, S1-inv, S1-rev).",
     "rep": "Repetition number within the condition, starting at 1.",
     "timestamp_utc": "When the debate finished (ISO 8601, UTC).",
     "proposition": "The proposition debated.",
-    "model_a": "Debater in seat A: argues FOR the proposition and speaks first.",
-    "model_b": "Debater in seat B: argues AGAINST the proposition and speaks second.",
+    "model_a": "Debater in seat A: argues FOR the proposition.",
+    "model_b": "Debater in seat B: argues AGAINST the proposition.",
+    "first_speaker": "Which seat spoke first: 'A' in batches 1–2, 'B' in batch 3.",
     "model_j": "Judge model.",
     "words_a": "Word budget per statement for seat A.",
     "words_b": "Word budget per statement for seat B.",
     "words_j_guidelines": "Word budget for the judge's opening guidelines.",
     "words_j_ruling": "Word budget for the judge's final ruling.",
-    "rounds": "Number of debate rounds (A then B each round).",
+    "rounds": "Number of debate rounds (one statement from each seat per round, first_speaker first).",
     "temperature": "Sampling temperature ('default' = provider default).",
     "winner": "'A', 'B', or 'unparsed' (the ruling lacked a WINNER: line).",
     "ruling_text": "The judge's full ruling.",
-    "transcript_json": "Every statement in order: judge guidelines, A/B per round, ruling; plus token usage.",
+    "transcript_json": "Every statement in speaking order: judge guidelines, A/B per round (first_speaker first), ruling; plus token usage.",
     "judge_prompt_hash": "Hash of the judge prompt, to confirm all runs used the same one.",
     "judge_disclosed_word_limits": "1 if the judge was told both debaters' word limits.",
     "tokens_in": "Total input tokens across all calls in the debate.",
@@ -75,11 +77,14 @@ LATEST_SQL = """
     ) WHERE rn = 1
 """
 
+SEAT_CONVENTION = "A argues FOR, B argues AGAINST. A spoke first in batches 1–2; in batch 3, B spoke first (see first_speaker)."
+
 STAT_NAMES = ["seat_bias", "judge_stability", "wordcap_effect", "model_strength_matrix"]
 
 INSTRUCTIONS = (
     "Read-only access to the AI Argue dataset from databloom.net: LLM debates judged by an LLM. "
-    "Seat A argues FOR the proposition and speaks first; seat B argues AGAINST and speaks second. "
+    "Seat A argues FOR the proposition; seat B argues AGAINST. A spoke first in batches 1–2; "
+    "in batch 3, B spoke first (see first_speaker). "
     "Start with dataset_info, then list_debates / get_debate for individual debates and "
     "query_stats for the headline aggregations."
 )
@@ -122,8 +127,8 @@ def dataset_info() -> dict:
     condition with its models, word budgets and verdict tally, the meaning of every column,
     the seat convention, and links to the pre-registrations and results writeup.
 
-    Seat convention: seat A argues FOR the proposition and speaks first; seat B argues
-    AGAINST and speaks second (last before the judge rules). The judge must name one winner.
+    Seat convention: A argues FOR, B argues AGAINST. A spoke first in batches 1–2; in
+    batch 3, B spoke first (see first_speaker). The judge must name one winner.
 
     Some batch-1 rulings omitted the WINNER: line ('unparsed') and were re-run once, as the
     pre-registration specified, so a few (batch_id, condition, rep) keys have two rows. Every
@@ -138,7 +143,7 @@ def dataset_info() -> dict:
         c = b["conditions"].setdefault(r["condition"], {
             "model_a": r["model_a"], "words_a": r["words_a"],
             "model_b": r["model_b"], "words_b": r["words_b"],
-            "model_j": r["model_j"], "rounds": r["rounds"], "rows": [],
+            "model_j": r["model_j"], "rounds": r["rounds"], "first_speaker": r["first_speaker"], "rows": [],
         })
         c["rows"].append(r)
     for b in batches.values():
@@ -149,8 +154,9 @@ def dataset_info() -> dict:
         "latest_rows": len(latest),
         "rule": "latest row per (batch_id, condition, rep) by timestamp_utc",
         "seat_convention": {
-            "A": "argues FOR the proposition, speaks first",
-            "B": "argues AGAINST the proposition, speaks second",
+            "A": "argues FOR the proposition",
+            "B": "argues AGAINST the proposition",
+            "order": "A spoke first in batches 1–2; in batch 3, B spoke first (see first_speaker).",
         },
         "batches": batches,
         "columns": COLUMN_MEANINGS,
@@ -172,8 +178,8 @@ def list_debates(
     """List debates as summary rows (no transcripts or rulings; use get_debate for those).
 
     Filters (all optional, combined with AND):
-      batch_id: exact, e.g. 'batch1' or 'batch2'.
-      condition: exact, e.g. 'S1', 'S1-inv', 'C0a', 'C0b', 'H1a', 'H1b'.
+      batch_id: exact, e.g. 'batch1', 'batch2' or 'batch3'.
+      condition: exact, e.g. 'S1', 'S1-inv', 'S1-rev', 'C0a', 'C0b', 'H1a', 'H1b'.
       model: case-insensitive substring matched against EITHER seat, e.g. 'haiku' or
              'claude-sonnet-4-5-20250929'.
       judge: case-insensitive substring of the judge model, e.g. 'gpt-5-mini'.
@@ -183,7 +189,7 @@ def list_debates(
              rep), the rows every analysis uses. True also returns superseded rows (rulings
              that were unparsed and re-run).
 
-    Seat A argues FOR and speaks first; seat B argues AGAINST and speaks second.
+    A argues FOR, B argues AGAINST. A spoke first in batches 1–2; in batch 3, B spoke first (see first_speaker).
     Returns {"total_matching", "returned", "rows"}, ordered by batch, condition, rep, time.
     """
     limit = max(1, min(int(limit), 200))
@@ -221,8 +227,9 @@ def get_debate(run_id: str) -> dict:
     """Get one debate in full: every column, the judge's ruling text, and the parsed transcript.
 
     run_id comes from list_debates. transcript.statements is in speaking order: the judge's
-    guidelines (step 'guidelines', round 0), then A and B for each round, then the ruling.
-    Seat A argues FOR and speaks first; seat B argues AGAINST and speaks second.
+    guidelines (step 'guidelines', round 0), then A and B for each round (first_speaker
+    first), then the ruling.
+    A argues FOR, B argues AGAINST. A spoke first in batches 1–2; in batch 3, B spoke first (see first_speaker).
     is_latest is False if this row was superseded by a re-run of the same rep (only the
     latest row counts in the analyses).
     """
@@ -252,12 +259,12 @@ def _seat_bias(rows):
             "batch_id": batch, "condition": cond,
             "model_a": rs[0]["model_a"], "words_a": rs[0]["words_a"],
             "model_b": rs[0]["model_b"], "words_b": rs[0]["words_b"],
+            "first_speaker": rs[0]["first_speaker"],
             "a_wins": t["A"], "b_wins": t["B"], "unparsed": t["unparsed"], "n": t["n"],
         })
     ident = _tally([r for r in rows if r["condition"] in IDENTICAL_CONDITIONS])
     return {
-        "description": "A/B wins per condition (latest row per rep). Seat A argues FOR and speaks "
-                       "first; seat B argues AGAINST and speaks second.",
+        "description": "A/B wins per condition (latest row per rep). " + SEAT_CONVENTION,
         "conditions": conditions,
         "identical_debaters": {
             "conditions": list(IDENTICAL_CONDITIONS),
@@ -278,6 +285,7 @@ def _judge_stability(rows):
         out.append({
             "batch_id": rs[0]["batch_id"], "condition": cond, "proposition": rs[0]["proposition"],
             "model_a": rs[0]["model_a"], "model_b": rs[0]["model_b"], "judge": rs[0]["model_j"],
+            "first_speaker": rs[0]["first_speaker"],
             "a_wins": t["A"], "b_wins": t["B"], "unparsed": t["unparsed"], "n": t["n"],
             "b_share": round(t["B"] / t["n"], 3) if t["n"] else None,
             "p_two_sided_fair_coin": _binom_two_sided(t["B"], t["A"] + t["B"]),
@@ -285,7 +293,8 @@ def _judge_stability(rows):
     return {
         "description": "Verdict distributions when both seats hold the same model and budget. "
                        "S1-inv inverts the proposition, so seat B argues the opposite content "
-                       "from S1. A fair judge should be near 50/50 in each.",
+                       "from S1. S1-rev keeps S1's proposition but B speaks first. "
+                       "A fair judge should be near 50/50 in each.",
         "conditions": out,
     }
 
@@ -343,7 +352,7 @@ def _model_strength_matrix(rows):
     return {
         "description": "Each debate contributes one appearance per seat. Win rate = wins / n for "
                        "that model at that per-statement word budget in that seat. Includes "
-                       "same-model debates (S1, S1-inv). Unparsed verdicts count as non-wins.",
+                       "same-model debates (S1, S1-inv, S1-rev). Unparsed verdicts count as non-wins.",
         "cells": out,
     }
 
@@ -362,14 +371,14 @@ def query_stats(name: str) -> dict:
 
     name is one of:
       seat_bias: A and B wins per condition, plus combined totals for the identical-debater
-          conditions (S1 and S1-inv) with a fair-coin p-value.
-      judge_stability: verdict distributions for S1 and S1-inv separately (same model in
-          both seats; the proposition is inverted in S1-inv).
+          conditions (S1, S1-inv and S1-rev) with a fair-coin p-value.
+      judge_stability: verdict distributions for S1, S1-inv and S1-rev separately (same model
+          in both seats; the proposition is inverted in S1-inv; B speaks first in S1-rev).
       wordcap_effect: the weaker model's (Haiku's) win rate against Sonnet at equal word
           budgets (C0a/C0b) versus a 4x budget (H1a/H1b), split by the seat it held.
       model_strength_matrix: model x per-statement word budget x seat -> wins, n, win_rate.
 
-    Seat A argues FOR and speaks first; seat B argues AGAINST and speaks second.
+    A argues FOR, B argues AGAINST. A spoke first in batches 1–2; in batch 3, B spoke first (see first_speaker).
     An unknown name returns {"error", "valid_names"}.
     """
     fn = STATS.get(name)
