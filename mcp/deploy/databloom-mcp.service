@@ -1,0 +1,12 @@
+[Unit]
+Description=DataBloom AI Argue MCP server (127.0.0.1:8000/mcp)
+After=network.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/home/ec2-user/apps/mcp
+ExecStart=/home/ec2-user/apps/mcp/.venv/bin/python server.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
